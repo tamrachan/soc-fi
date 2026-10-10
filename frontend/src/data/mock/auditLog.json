@@ -1,0 +1,15 @@
+[
+  { "id": "aud_0013", "at": "2026-10-09T20:14:00Z", "actorId": "usr_amara", "action": "membership.requested", "entity": { "type": "society", "id": "soc_fintech" }, "societyId": "soc_fintech", "details": {} },
+  { "id": "aud_0012", "at": "2026-10-04T12:05:02Z", "actorId": "usr_amara", "action": "claim.submitted", "entity": { "type": "claim", "id": "clm_0005" }, "societyId": "soc_blockchain", "details": { "version": 1, "checksPassed": true } },
+  { "id": "aud_0011", "at": "2026-10-04T09:30:01Z", "actorId": "usr_priya", "action": "claim.submitted", "entity": { "type": "claim", "id": "clm_0004" }, "societyId": "soc_blockchain", "details": { "version": 1, "checksPassed": true } },
+  { "id": "aud_0010", "at": "2026-10-02T19:05:00Z", "actorId": "usr_elena", "action": "claim.returned", "entity": { "type": "claim", "id": "clm_0003" }, "societyId": "soc_baking", "details": { "version": 1, "resolution": "edit_existing" } },
+  { "id": "aud_0009", "at": "2026-10-02T14:22:01Z", "actorId": "usr_kit", "action": "claim.submitted", "entity": { "type": "claim", "id": "clm_0006" }, "societyId": "soc_blockchain", "details": { "version": 1, "checksPassed": true } },
+  { "id": "aud_0008", "at": "2026-10-01T08:40:01Z", "actorId": "usr_amara", "action": "claim.submitted", "entity": { "type": "claim", "id": "clm_0003" }, "societyId": "soc_baking", "details": { "version": 1, "checksPassed": true } },
+  { "id": "aud_0007", "at": "2026-09-26T16:21:00Z", "actorId": "system", "action": "payment.confirmed", "entity": { "type": "payment", "id": "pay_0001" }, "societyId": "soc_baking", "details": { "amount": 43.94, "token": "USDC" } },
+  { "id": "aud_0006", "at": "2026-09-26T16:16:12Z", "actorId": "usr_elena", "action": "payment.device_confirmed", "entity": { "type": "payment", "id": "pay_0001" }, "societyId": "soc_baking", "details": { "device": "Ledger Nano X" } },
+  { "id": "aud_0005", "at": "2026-09-26T16:15:00Z", "actorId": "usr_elena", "action": "claim.approved", "entity": { "type": "claim", "id": "clm_0001" }, "societyId": "soc_baking", "details": { "version": 1 } },
+  { "id": "aud_0004", "at": "2026-09-21T12:40:00Z", "actorId": "usr_jonah", "action": "claim.rejected", "entity": { "type": "claim", "id": "clm_0002" }, "societyId": "soc_blockchain", "details": { "version": 1 } },
+  { "id": "aud_0003", "at": "2026-09-20T13:15:00Z", "actorId": "usr_sam", "action": "committee.matched", "entity": { "type": "society", "id": "soc_fintech" }, "societyId": "soc_fintech", "details": { "role": "treasurer", "committeeRecordId": "cr_005" } },
+  { "id": "aud_0002", "at": "2026-09-15T09:00:00Z", "actorId": "usr_jonah", "action": "society.reimbursement_enabled", "entity": { "type": "society", "id": "soc_blockchain" }, "societyId": "soc_blockchain", "details": {} },
+  { "id": "aud_0001", "at": "2026-09-12T09:10:00Z", "actorId": "usr_jonah", "action": "committee.matched", "entity": { "type": "society", "id": "soc_blockchain" }, "societyId": "soc_blockchain", "details": { "role": "treasurer", "committeeRecordId": "cr_001" } }
+]

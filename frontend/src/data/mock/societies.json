@@ -1,0 +1,242 @@
+[
+  {
+    "id": "soc_blockchain",
+    "unionId": "YU-BIT-004",
+    "name": "Blockchain Society",
+    "category": "Business, Innovation & Technology",
+    "memberCount": 96,
+    "unionStatus": "active",
+    "inviteCode": "BLOCK-2026",
+    "reimbursement": {
+      "status": "enabled",
+      "token": "USDC",
+      "network": "base-sepolia",
+      "currency": "GBP",
+      "treasuryWallet": "0x4B0897b0513fdC7C541B6d9D7E929C4e5364D2dB",
+      "perClaimLimit": 200,
+      "termBudget": 1500,
+      "spentThisTerm": 0,
+      "allowedCategories": ["food", "venue", "printing", "equipment", "travel"],
+      "setup": {
+        "committeeVerified": true,
+        "treasuryWalletSet": true,
+        "ledgerPaired": true,
+        "policySet": true,
+        "unionApproval": "approved"
+      },
+      "ledgerDevice": { "model": "Ledger Flex", "genuineCheckAt": "2026-09-14T10:12:00Z" },
+      "enabledAt": "2026-09-15T09:00:00Z",
+      "enabledBy": "usr_jonah"
+    }
+  },
+  {
+    "id": "soc_baking",
+    "unionId": "YU-HPC-031",
+    "name": "The Baking Society",
+    "category": "Hobbies & Pop Culture",
+    "memberCount": 174,
+    "unionStatus": "active",
+    "inviteCode": "BAKE-2026",
+    "reimbursement": {
+      "status": "enabled",
+      "token": "USDC",
+      "network": "base-sepolia",
+      "currency": "GBP",
+      "treasuryWallet": "0x5c6B0f7Bf3E7ce046039Bd8FABdfD3f9F5021678",
+      "perClaimLimit": 80,
+      "termBudget": 600,
+      "spentThisTerm": 34.6,
+      "allowedCategories": ["food", "equipment"],
+      "setup": {
+        "committeeVerified": true,
+        "treasuryWalletSet": true,
+        "ledgerPaired": true,
+        "policySet": true,
+        "unionApproval": "approved"
+      },
+      "ledgerDevice": { "model": "Ledger Nano X", "genuineCheckAt": "2026-09-10T14:40:00Z" },
+      "enabledAt": "2026-09-11T08:30:00Z",
+      "enabledBy": "usr_elena"
+    }
+  },
+  {
+    "id": "soc_fintech",
+    "unionId": "YU-BIT-011",
+    "name": "FinTech Society",
+    "category": "Business, Innovation & Technology",
+    "memberCount": 68,
+    "unionStatus": "active",
+    "inviteCode": "FINTECH-2026",
+    "reimbursement": {
+      "status": "disabled",
+      "token": "USDC",
+      "network": "base-sepolia",
+      "currency": "GBP",
+      "treasuryWallet": null,
+      "perClaimLimit": null,
+      "termBudget": null,
+      "spentThisTerm": 0,
+      "allowedCategories": [],
+      "setup": {
+        "committeeVerified": true,
+        "treasuryWalletSet": false,
+        "ledgerPaired": false,
+        "policySet": false,
+        "unionApproval": "not_requested"
+      },
+      "ledgerDevice": null,
+      "enabledAt": null,
+      "enabledBy": null
+    }
+  },
+  {
+    "id": "soc_staai",
+    "unionId": "YU-BIT-019",
+    "name": "STA-AI",
+    "category": "Business, Innovation & Technology",
+    "memberCount": 121,
+    "unionStatus": "active",
+    "inviteCode": "STAAI-2026",
+    "reimbursement": {
+      "status": "disabled",
+      "token": "USDC",
+      "network": "base-sepolia",
+      "currency": "GBP",
+      "treasuryWallet": null,
+      "perClaimLimit": null,
+      "termBudget": null,
+      "spentThisTerm": 0,
+      "allowedCategories": [],
+      "setup": {
+        "committeeVerified": false,
+        "treasuryWalletSet": false,
+        "ledgerPaired": false,
+        "policySet": false,
+        "unionApproval": "not_requested"
+      },
+      "ledgerDevice": null,
+      "enabledAt": null,
+      "enabledBy": null
+    }
+  },
+  {
+    "id": "soc_stacs",
+    "unionId": "YU-BIT-008",
+    "name": "Computing Society (STACS)",
+    "category": "Business, Innovation & Technology",
+    "memberCount": 210,
+    "unionStatus": "active",
+    "inviteCode": "STACS-2026",
+    "reimbursement": {
+      "status": "disabled",
+      "token": "USDC",
+      "network": "base-sepolia",
+      "currency": "GBP",
+      "treasuryWallet": null,
+      "perClaimLimit": null,
+      "termBudget": null,
+      "spentThisTerm": 0,
+      "allowedCategories": [],
+      "setup": {
+        "committeeVerified": false,
+        "treasuryWalletSet": false,
+        "ledgerPaired": false,
+        "policySet": false,
+        "unionApproval": "not_requested"
+      },
+      "ledgerDevice": null,
+      "enabledAt": null,
+      "enabledBy": null
+    }
+  },
+  {
+    "id": "soc_chess",
+    "unionId": "YU-HPC-006",
+    "name": "Chess Society",
+    "category": "Hobbies & Pop Culture",
+    "memberCount": 84,
+    "unionStatus": "active",
+    "inviteCode": "CHESS-2026",
+    "reimbursement": {
+      "status": "disabled",
+      "token": "USDC",
+      "network": "base-sepolia",
+      "currency": "GBP",
+      "treasuryWallet": null,
+      "perClaimLimit": null,
+      "termBudget": null,
+      "spentThisTerm": 0,
+      "allowedCategories": [],
+      "setup": {
+        "committeeVerified": false,
+        "treasuryWalletSet": false,
+        "ledgerPaired": false,
+        "policySet": false,
+        "unionApproval": "not_requested"
+      },
+      "ledgerDevice": null,
+      "enabledAt": null,
+      "enabledBy": null
+    }
+  },
+  {
+    "id": "soc_breakaway",
+    "unionId": "YU-OPA-003",
+    "name": "Breakaway (Hill Walking)",
+    "category": "Outdoors, Physical Activity & Animals",
+    "memberCount": 139,
+    "unionStatus": "active",
+    "inviteCode": "HILLS-2026",
+    "reimbursement": {
+      "status": "disabled",
+      "token": "USDC",
+      "network": "base-sepolia",
+      "currency": "GBP",
+      "treasuryWallet": null,
+      "perClaimLimit": null,
+      "termBudget": null,
+      "spentThisTerm": 0,
+      "allowedCategories": [],
+      "setup": {
+        "committeeVerified": false,
+        "treasuryWalletSet": false,
+        "ledgerPaired": false,
+        "policySet": false,
+        "unionApproval": "not_requested"
+      },
+      "ledgerDevice": null,
+      "enabledAt": null,
+      "enabledBy": null
+    }
+  },
+  {
+    "id": "soc_film",
+    "unionId": "YU-HPC-014",
+    "name": "Film Society",
+    "category": "Hobbies & Pop Culture",
+    "memberCount": 61,
+    "unionStatus": "active",
+    "inviteCode": "FILM-2026",
+    "reimbursement": {
+      "status": "disabled",
+      "token": "USDC",
+      "network": "base-sepolia",
+      "currency": "GBP",
+      "treasuryWallet": null,
+      "perClaimLimit": null,
+      "termBudget": null,
+      "spentThisTerm": 0,
+      "allowedCategories": [],
+      "setup": {
+        "committeeVerified": false,
+        "treasuryWalletSet": false,
+        "ledgerPaired": false,
+        "policySet": false,
+        "unionApproval": "not_requested"
+      },
+      "ledgerDevice": null,
+      "enabledAt": null,
+      "enabledBy": null
+    }
+  }
+]

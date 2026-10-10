@@ -1,0 +1,247 @@
+[
+  {
+    "id": "clm_0001",
+    "reference": "CLM-0001",
+    "societyId": "soc_baking",
+    "claimantId": "usr_amara",
+    "status": "paid",
+    "currentVersion": 1,
+    "approvedVersion": 1,
+    "paymentId": "pay_0001",
+    "supersedesClaimId": null,
+    "createdAt": "2026-09-25T10:02:00Z",
+    "updatedAt": "2026-09-26T16:21:00Z",
+    "versions": [
+      {
+        "version": 1,
+        "entryMode": "ai_prefill",
+        "fields": { "merchant": "Tesco Superstore", "date": "2026-09-24", "amount": 34.6, "currency": "GBP", "category": "food", "description": "Ingredients for the brownie and cookie session in Lower College Hall" },
+        "receipt": { "kind": "sample", "sampleId": "rcp_tesco_bake", "fileName": "tesco-receipt.jpg" },
+        "aiExtraction": { "merchant": "Tesco Superstore", "date": "2026-09-24", "total": 34.6, "currency": "GBP", "suggestedCategory": "food", "confidence": 0.96, "flags": [], "discardedFields": {}, "model": "mock-vision-1", "extractedAt": "2026-09-25T10:01:40Z" },
+        "memberConfirmedAt": "2026-09-25T10:02:00Z",
+        "submittedAt": "2026-09-25T10:02:00Z",
+        "validation": {
+          "passed": true,
+          "ranAt": "2026-09-25T10:02:01Z",
+          "checks": [
+            { "id": "amount_matches", "passed": true, "detail": "£34.60 claimed, £34.60 on receipt" },
+            { "id": "not_duplicate", "passed": true, "detail": "No matching claim found" },
+            { "id": "within_budget", "passed": true, "detail": "£600.00 left of £600.00" },
+            { "id": "allowed_category", "passed": true, "detail": "Food & drink is allowed" },
+            { "id": "recent_date", "passed": true, "detail": "Receipt is 1 day old (max 90)" },
+            { "id": "under_limit", "passed": true, "detail": "Limit £80.00" },
+            { "id": "not_flagged", "passed": true, "detail": "Nothing flagged by the reader" }
+          ]
+        }
+      }
+    ],
+    "reviews": [
+      { "id": "rev_0001", "version": 1, "decision": "approve", "resolution": null, "reason": "", "reviewerId": "usr_elena", "at": "2026-09-26T16:15:00Z" }
+    ]
+  },
+  {
+    "id": "clm_0002",
+    "reference": "CLM-0002",
+    "societyId": "soc_blockchain",
+    "claimantId": "usr_kit",
+    "status": "rejected",
+    "currentVersion": 1,
+    "approvedVersion": null,
+    "paymentId": null,
+    "supersedesClaimId": null,
+    "createdAt": "2026-09-20T09:12:00Z",
+    "updatedAt": "2026-09-21T12:40:00Z",
+    "versions": [
+      {
+        "version": 1,
+        "entryMode": "ai_prefill",
+        "fields": { "merchant": "Deliveroo", "date": "2026-09-19", "amount": 19.47, "currency": "GBP", "category": "food", "description": "Food after the smart-contracts workshop" },
+        "receipt": { "kind": "sample", "sampleId": "rcp_deliveroo", "fileName": "deliveroo.png" },
+        "aiExtraction": { "merchant": "Deliveroo", "date": "2026-09-19", "total": 19.47, "currency": "GBP", "suggestedCategory": "food", "confidence": 0.91, "flags": [], "discardedFields": {}, "model": "mock-vision-1", "extractedAt": "2026-09-20T09:11:30Z" },
+        "memberConfirmedAt": "2026-09-20T09:12:00Z",
+        "submittedAt": "2026-09-20T09:12:00Z",
+        "validation": {
+          "passed": true,
+          "ranAt": "2026-09-20T09:12:01Z",
+          "checks": [
+            { "id": "amount_matches", "passed": true, "detail": "£19.47 claimed, £19.47 on receipt" },
+            { "id": "not_duplicate", "passed": true, "detail": "No matching claim found" },
+            { "id": "within_budget", "passed": true, "detail": "£1,500.00 left of £1,500.00" },
+            { "id": "allowed_category", "passed": true, "detail": "Food & drink is allowed" },
+            { "id": "recent_date", "passed": true, "detail": "Receipt is 1 day old (max 90)" },
+            { "id": "under_limit", "passed": true, "detail": "Limit £200.00" },
+            { "id": "not_flagged", "passed": true, "detail": "Nothing flagged by the reader" }
+          ]
+        }
+      }
+    ],
+    "reviews": [
+      { "id": "rev_0002", "version": 1, "decision": "reject", "resolution": null, "reason": "Single late-night meal delivered to a home address, so it isn't a society expense under the food policy.", "reviewerId": "usr_jonah", "at": "2026-09-21T12:40:00Z" }
+    ]
+  },
+  {
+    "id": "clm_0003",
+    "reference": "CLM-0003",
+    "societyId": "soc_baking",
+    "claimantId": "usr_amara",
+    "status": "returned",
+    "currentVersion": 1,
+    "approvedVersion": null,
+    "paymentId": null,
+    "supersedesClaimId": null,
+    "createdAt": "2026-10-01T08:40:00Z",
+    "updatedAt": "2026-10-02T19:05:00Z",
+    "versions": [
+      {
+        "version": 1,
+        "entryMode": "ai_prefill",
+        "fields": { "merchant": "Sainsbury's Local", "date": "2026-09-30", "amount": 39.6, "currency": "GBP", "category": "food", "description": "Cupcake decorating social: icing, cream, strawberries and cases" },
+        "receipt": { "kind": "sample", "sampleId": "rcp_sainsburys", "fileName": "sainsburys.jpg" },
+        "aiExtraction": { "merchant": "Sainsbury's Local", "date": "2026-09-30", "total": 39.6, "currency": "GBP", "suggestedCategory": "food", "confidence": 0.93, "flags": [], "discardedFields": {}, "model": "mock-vision-1", "extractedAt": "2026-10-01T08:39:10Z" },
+        "memberConfirmedAt": "2026-10-01T08:40:00Z",
+        "submittedAt": "2026-10-01T08:40:00Z",
+        "validation": {
+          "passed": true,
+          "ranAt": "2026-10-01T08:40:01Z",
+          "checks": [
+            { "id": "amount_matches", "passed": true, "detail": "£39.60 claimed, £39.60 on receipt" },
+            { "id": "not_duplicate", "passed": true, "detail": "No matching claim found" },
+            { "id": "within_budget", "passed": true, "detail": "£565.40 left of £600.00" },
+            { "id": "allowed_category", "passed": true, "detail": "Food & drink is allowed" },
+            { "id": "recent_date", "passed": true, "detail": "Receipt is 1 day old (max 90)" },
+            { "id": "under_limit", "passed": true, "detail": "Limit £80.00" },
+            { "id": "not_flagged", "passed": true, "detail": "Nothing flagged by the reader" }
+          ]
+        }
+      }
+    ],
+    "reviews": [
+      { "id": "rev_0003", "version": 1, "decision": "return", "resolution": "edit_existing", "reason": "The receipt includes shampoo (£4.50), which is a personal item. Please change the amount to £35.10 and resubmit.", "reviewerId": "usr_elena", "at": "2026-10-02T19:05:00Z" }
+    ]
+  },
+  {
+    "id": "clm_0004",
+    "reference": "CLM-0004",
+    "societyId": "soc_blockchain",
+    "claimantId": "usr_priya",
+    "status": "pending_review",
+    "currentVersion": 1,
+    "approvedVersion": null,
+    "paymentId": null,
+    "supersedesClaimId": null,
+    "createdAt": "2026-10-04T09:30:00Z",
+    "updatedAt": "2026-10-04T09:30:00Z",
+    "versions": [
+      {
+        "version": 1,
+        "entryMode": "ai_prefill",
+        "fields": { "merchant": "Domino's Pizza", "date": "2026-10-03", "amount": 145.9, "currency": "GBP", "category": "food", "description": "Saturday dinner for ~40 hackers at the Blockchain Society hackathon" },
+        "receipt": { "kind": "sample", "sampleId": "rcp_dominos", "fileName": "dominos-order-4471.png" },
+        "aiExtraction": { "merchant": "Domino's Pizza", "date": "2026-10-03", "total": 145.9, "currency": "GBP", "suggestedCategory": "food", "confidence": 0.95, "flags": [], "discardedFields": {}, "model": "mock-vision-1", "extractedAt": "2026-10-04T09:29:20Z" },
+        "memberConfirmedAt": "2026-10-04T09:30:00Z",
+        "submittedAt": "2026-10-04T09:30:00Z",
+        "validation": {
+          "passed": true,
+          "ranAt": "2026-10-04T09:30:01Z",
+          "checks": [
+            { "id": "amount_matches", "passed": true, "detail": "£145.90 claimed, £145.90 on receipt" },
+            { "id": "not_duplicate", "passed": true, "detail": "No matching claim found" },
+            { "id": "within_budget", "passed": true, "detail": "£1,500.00 left of £1,500.00" },
+            { "id": "allowed_category", "passed": true, "detail": "Food & drink is allowed" },
+            { "id": "recent_date", "passed": true, "detail": "Receipt is 1 day old (max 90)" },
+            { "id": "under_limit", "passed": true, "detail": "Limit £200.00" },
+            { "id": "not_flagged", "passed": true, "detail": "Nothing flagged by the reader" }
+          ]
+        }
+      }
+    ],
+    "reviews": []
+  },
+  {
+    "id": "clm_0005",
+    "reference": "CLM-0005",
+    "societyId": "soc_blockchain",
+    "claimantId": "usr_amara",
+    "status": "pending_review",
+    "currentVersion": 1,
+    "approvedVersion": null,
+    "paymentId": null,
+    "supersedesClaimId": null,
+    "createdAt": "2026-10-04T12:05:00Z",
+    "updatedAt": "2026-10-04T12:05:00Z",
+    "versions": [
+      {
+        "version": 1,
+        "entryMode": "manual",
+        "fields": { "merchant": "Tesco Express", "date": "2026-10-02", "amount": 47.85, "currency": "GBP", "category": "food", "description": "Overnight snacks and drinks for the hackathon" },
+        "receipt": { "kind": "sample", "sampleId": "rcp_tesco_express", "fileName": "tesco-express.jpg" },
+        "aiExtraction": { "merchant": "Tesco Express", "date": "2026-10-02", "total": 47.85, "currency": "GBP", "suggestedCategory": "food", "confidence": 0.97, "flags": [], "discardedFields": {}, "model": "mock-vision-1", "extractedAt": "2026-10-04T12:05:01Z" },
+        "memberConfirmedAt": "2026-10-04T12:05:00Z",
+        "submittedAt": "2026-10-04T12:05:00Z",
+        "validation": {
+          "passed": true,
+          "ranAt": "2026-10-04T12:05:02Z",
+          "checks": [
+            { "id": "amount_matches", "passed": true, "detail": "£47.85 claimed, £47.85 on receipt" },
+            { "id": "not_duplicate", "passed": true, "detail": "No matching claim found" },
+            { "id": "within_budget", "passed": true, "detail": "£1,500.00 left of £1,500.00" },
+            { "id": "allowed_category", "passed": true, "detail": "Food & drink is allowed" },
+            { "id": "recent_date", "passed": true, "detail": "Receipt is 2 days old (max 90)" },
+            { "id": "under_limit", "passed": true, "detail": "Limit £200.00" },
+            { "id": "not_flagged", "passed": true, "detail": "Nothing flagged by the reader" }
+          ]
+        }
+      }
+    ],
+    "reviews": []
+  },
+  {
+    "id": "clm_0006",
+    "reference": "CLM-0006",
+    "societyId": "soc_blockchain",
+    "claimantId": "usr_kit",
+    "status": "pending_review",
+    "currentVersion": 1,
+    "approvedVersion": null,
+    "paymentId": null,
+    "supersedesClaimId": null,
+    "createdAt": "2026-10-02T14:22:00Z",
+    "updatedAt": "2026-10-02T14:22:00Z",
+    "versions": [
+      {
+        "version": 1,
+        "entryMode": "ai_prefill",
+        "fields": { "merchant": "Pixel Print Co.", "date": "2026-10-01", "amount": 38.0, "currency": "GBP", "category": "printing", "description": "Hackathon banner for the venue entrance" },
+        "receipt": { "kind": "sample", "sampleId": "rcp_pixel", "fileName": "pixel-print-invoice.pdf" },
+        "aiExtraction": {
+          "merchant": "Pixel Print Co.",
+          "date": "2026-10-01",
+          "total": 38.0,
+          "currency": "GBP",
+          "suggestedCategory": "printing",
+          "confidence": 0.88,
+          "flags": [],
+          "discardedFields": { "payTo": "0x9fA3c0dE51b4E7a2C1d07B6e88f3A2bC4d1Ec41E", "amountOverride": "4999.00", "priority": "urgent", "preApproved": true },
+          "model": "mock-vision-1",
+          "extractedAt": "2026-10-02T14:21:30Z"
+        },
+        "memberConfirmedAt": "2026-10-02T14:22:00Z",
+        "submittedAt": "2026-10-02T14:22:00Z",
+        "validation": {
+          "passed": true,
+          "ranAt": "2026-10-02T14:22:01Z",
+          "checks": [
+            { "id": "amount_matches", "passed": true, "detail": "£38.00 claimed, £38.00 on receipt" },
+            { "id": "not_duplicate", "passed": true, "detail": "No matching claim found" },
+            { "id": "within_budget", "passed": true, "detail": "£1,500.00 left of £1,500.00" },
+            { "id": "allowed_category", "passed": true, "detail": "Printing & publicity is allowed" },
+            { "id": "recent_date", "passed": true, "detail": "Receipt is 1 day old (max 90)" },
+            { "id": "under_limit", "passed": true, "detail": "Limit £200.00" },
+            { "id": "not_flagged", "passed": true, "detail": "Nothing flagged by the reader" }
+          ]
+        }
+      }
+    ],
+    "reviews": []
+  }
+]

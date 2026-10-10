@@ -1,0 +1,14 @@
+[
+  { "id": "cr_001", "societyId": "soc_blockchain", "fullName": "Jonah Whitfield", "role": "treasurer", "termStart": "2026-06-01", "termEnd": "2027-05-31", "source": "union_import" },
+  { "id": "cr_002", "societyId": "soc_blockchain", "fullName": "Priya Raman", "role": "logistics_coordinator", "termStart": "2026-06-01", "termEnd": "2027-05-31", "source": "union_import" },
+  { "id": "cr_003", "societyId": "soc_baking", "fullName": "Elena Marsh", "role": "treasurer", "termStart": "2026-06-01", "termEnd": "2027-05-31", "source": "union_import" },
+  { "id": "cr_004", "societyId": "soc_baking", "fullName": "Callum Reid", "role": "logistics_coordinator", "termStart": "2026-06-01", "termEnd": "2027-05-31", "source": "union_import" },
+  { "id": "cr_005", "societyId": "soc_fintech", "fullName": "Sam Lindqvist", "role": "treasurer", "termStart": "2026-06-01", "termEnd": "2027-05-31", "source": "union_import" },
+  { "id": "cr_006", "societyId": "soc_staai", "fullName": "Tomás Ferreira", "role": "treasurer", "termStart": "2026-06-01", "termEnd": "2027-05-31", "source": "union_import" },
+  { "id": "cr_007", "societyId": "soc_staai", "fullName": "Hana Kobayashi", "role": "logistics_coordinator", "termStart": "2026-06-01", "termEnd": "2027-05-31", "source": "union_import" },
+  { "id": "cr_008", "societyId": "soc_stacs", "fullName": "Ruth Adebayo", "role": "treasurer", "termStart": "2026-06-01", "termEnd": "2027-05-31", "source": "union_import" },
+  { "id": "cr_009", "societyId": "soc_chess", "fullName": "Oliver Chen", "role": "treasurer", "termStart": "2026-06-01", "termEnd": "2027-05-31", "source": "union_import" },
+  { "id": "cr_010", "societyId": "soc_breakaway", "fullName": "Freya Nilsen", "role": "treasurer", "termStart": "2026-06-01", "termEnd": "2027-05-31", "source": "union_import" },
+  { "id": "cr_011", "societyId": "soc_breakaway", "fullName": "Malik Hassan", "role": "logistics_coordinator", "termStart": "2026-06-01", "termEnd": "2027-05-31", "source": "union_import" },
+  { "id": "cr_012", "societyId": "soc_film", "fullName": "Ines Duarte", "role": "treasurer", "termStart": "2026-06-01", "termEnd": "2027-05-31", "source": "union_import" }
+]

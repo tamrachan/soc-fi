@@ -1,0 +1,30 @@
+[
+  {
+    "id": "pay_0001",
+    "claimId": "clm_0001",
+    "claimReference": "CLM-0001",
+    "claimVersion": 1,
+    "societyId": "soc_baking",
+    "recipientUserId": "usr_amara",
+    "recipientAddress": "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
+    "sourceAddress": "0x5c6B0f7Bf3E7ce046039Bd8FABdfD3f9F5021678",
+    "fiatAmount": 34.6,
+    "fiatCurrency": "GBP",
+    "fxRate": 1.27,
+    "amount": 43.94,
+    "token": "USDC",
+    "network": "base-sepolia",
+    "status": "confirmed",
+    "attempts": 1,
+    "txHash": "0x7d3f9a12c4e8b0f1a6d25e7c9b3048fa1e62d7c05b9a84e3f1c6d2a07b5e9f31",
+    "approvedBy": "usr_elena",
+    "approvedAt": "2026-09-26T16:15:00Z",
+    "deviceConfirmedAt": "2026-09-26T16:16:12Z",
+    "confirmedAt": "2026-09-26T16:21:00Z",
+    "history": [
+      { "status": "awaiting_device", "at": "2026-09-26T16:15:00Z" },
+      { "status": "pending", "at": "2026-09-26T16:16:12Z" },
+      { "status": "confirmed", "at": "2026-09-26T16:21:00Z" }
+    ]
+  }
+]
