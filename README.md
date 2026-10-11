@@ -1,4 +1,4 @@
-# Countersign — ledger-hackathon
+# SocFi — Society Finance, secured.
 
 An AI agent checks student-society expense claims in seconds, but it can't pay anyone. Only the society treasurer's Ledger can release the money. See [`Context/CONTEXT.md`](Context/CONTEXT.md) and [`user_flows.md`](user_flows.md).
 
@@ -25,18 +25,32 @@ The site will be at `https://tamrachan.github.io/ledger-hackathon/`. Routing use
 
 Open the Pages URL on your phone, then **Share → Add to Home Screen** (iOS) or **Install app** (Android). It opens full-screen with a bottom tab bar. The centre **Scan** button opens the camera directly. Photos are compressed on the phone before upload.
 
+### Receipt reader
+
+- **Default: free on-device OCR.** Tesseract.js runs in the browser, so there's no key and no cost, and the photo never leaves the phone. The first read downloads about 10 MB of OCR data, so do one practice scan before going on stage.
+- **Optional: Claude vision.** More accurate on crumpled or angled photos and PDFs. In the app go to **Me → Receipt reader**, choose Claude and paste an Anthropic API key (it's stored in that browser only). Use a key with a low spend limit and delete it after the demo.
+- **Test receipts.** Open `#/demo/receipts` on a laptop, then photograph one with the phone using **Scan**. Two of them are fraudulent.
+
 ### Demo script
 
 Society names come from the St Andrews Students' Association directory. All people, wallets and receipts are fictional.
 
+**The three moments to show:**
+1. **Receipt upload and parsing:** a real photo, read live.
+2. **The treasurer's decision:** Approve, Request edits or Deny.
+3. **A fraudulent receipt rejected by the agent.**
+
 | As | Do | Shows |
 |---|---|---|
-| Amara (member) | Scan → Blockchain Society → *Co-op Food* hackathon lunch (or take a real photo) → tick each field → submit | AI pre-fill, member checks every field, all 7 checks pass |
+| Amara (member) | Scan → Blockchain Society → **Take photo** of the *Co-op Food* test receipt on the laptop → tick each field → submit | Real AI/OCR parsing, member checks every field, all 7 checks pass |
+| Amara | Scan → photograph *Pixel Print Co.* | **Fraud:** the receipt agent finds hidden "note to AI" instructions and a wallet address, and rejects it before any treasurer sees it |
+| Amara | Scan → *Cook & Bake Supplies* (sample list, or the Claude reader on a photo) | **Fraud:** the line items add up to £20 but the total says £70, so it's rejected as altered |
 | Amara | Scan → The Baking Society → *Tesco Express* bread-workshop ingredients | Baking ingredients use case |
-| Amara | Scan → *Pixel Print Co.* | Hidden prompt-injection text is flagged, so the claim can't be submitted |
 | Amara | Scan → *Fife Coast Catering* / June *Co-op* / *Domino's* | Over limit / too old / duplicate of CLM-0004 |
 | Amara | Claims → CLM-0003 → Edit claim, change £39.60 to £35.10 | The Baking treasurer said to remove the shampoo. A partial claim passes and creates version 2 |
-| Jonah (Blockchain treasurer) | Review → CLM-0004 (£145.90 Domino's for the hackathon) → Approve → hold to sign | Ledger device approval, then pending, then paid only after confirmation |
+| Jonah (Blockchain treasurer) | Review → CLM-0004 (£145.90 Domino's for the hackathon) → **A** (Approve) → hold to sign → Next claim | One decision card with three choices, then Ledger device approval. Paid only after confirmation |
+| Jonah | Review → CLM-0005 → **E** (Request edits) → tap a quick reason → Send back | Edits requested in a few taps |
+| Jonah | Review → any claim → **D** (Deny) → "Not a society expense" | Deny with a reason the member sees |
 | Jonah | Review → CLM-0006 | The AI *was* tricked. The extra fields were discarded and payment can only go to Kit's saved wallet |
 | Jonah | Approve CLM-0005, choose "RPC times out" | Needs-reconciliation path, with no double payment |
 | Elena (Baking treasurer) | Review the resubmitted CLM-0003 | The member-vs-AI table flags the partial amount for a human to check |

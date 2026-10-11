@@ -135,7 +135,7 @@
       {
         "version": 1,
         "entryMode": "ai_prefill",
-        "fields": { "merchant": "Domino's Pizza", "date": "2026-10-03", "amount": 145.9, "currency": "GBP", "category": "food", "description": "Saturday dinner for ~40 hackers at the Blockchain Society hackathon" },
+        "fields": { "merchant": "Domino's Pizza", "date": "2026-10-03", "amount": 145.9, "currency": "GBP", "category": "food", "description": "Pizza for ~40 hackers at the Blockchain Society hackathon with Ledger" },
         "receipt": { "kind": "sample", "sampleId": "rcp_dominos", "fileName": "dominos-order-4471.png" },
         "aiExtraction": { "merchant": "Domino's Pizza", "date": "2026-10-03", "total": 145.9, "currency": "GBP", "suggestedCategory": "food", "confidence": 0.95, "flags": [], "discardedFields": {}, "model": "mock-vision-1", "extractedAt": "2026-10-04T09:29:20Z" },
         "memberConfirmedAt": "2026-10-04T09:30:00Z",
@@ -173,7 +173,7 @@
       {
         "version": 1,
         "entryMode": "manual",
-        "fields": { "merchant": "Tesco Express", "date": "2026-10-02", "amount": 47.85, "currency": "GBP", "category": "food", "description": "Overnight snacks and drinks for the hackathon" },
+        "fields": { "merchant": "Tesco Express", "date": "2026-10-02", "amount": 47.85, "currency": "GBP", "category": "food", "description": "Overnight snacks and drinks for the Ledger hackathon" },
         "receipt": { "kind": "sample", "sampleId": "rcp_tesco_express", "fileName": "tesco-express.jpg" },
         "aiExtraction": { "merchant": "Tesco Express", "date": "2026-10-02", "total": 47.85, "currency": "GBP", "suggestedCategory": "food", "confidence": 0.97, "flags": [], "discardedFields": {}, "model": "mock-vision-1", "extractedAt": "2026-10-04T12:05:01Z" },
         "memberConfirmedAt": "2026-10-04T12:05:00Z",
@@ -211,7 +211,7 @@
       {
         "version": 1,
         "entryMode": "ai_prefill",
-        "fields": { "merchant": "Pixel Print Co.", "date": "2026-10-01", "amount": 38.0, "currency": "GBP", "category": "printing", "description": "Hackathon banner for the venue entrance" },
+        "fields": { "merchant": "Pixel Print Co.", "date": "2026-10-01", "amount": 38.0, "currency": "GBP", "category": "printing", "description": "Banner for the Ledger hackathon venue entrance" },
         "receipt": { "kind": "sample", "sampleId": "rcp_pixel", "fileName": "pixel-print-invoice.pdf" },
         "aiExtraction": {
           "merchant": "Pixel Print Co.",

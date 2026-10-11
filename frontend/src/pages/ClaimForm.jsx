@@ -14,7 +14,7 @@ const VERIFY_KEYS = ['merchant', 'date', 'amount', 'currency', 'category']
 const NONE_VERIFIED = Object.fromEntries(VERIFY_KEYS.map((k) => [k, false]))
 
 // Per-device convenience: most people claim for the same society every time.
-const LAST_SOCIETY_KEY = 'countersign.lastSociety'
+const LAST_SOCIETY_KEY = 'socfi.lastSociety'
 const readLastSociety = () => {
   try {
     return localStorage.getItem(LAST_SOCIETY_KEY)
@@ -49,6 +49,65 @@ function VField({ id, label, verified, onVerify, aiFilled, aiHint, children, ful
   )
 }
 
+function progressLabel(p) {
+  const stage = p?.stage ?? ''
+  if (!stage) return 'Reading receipt…'
+  if (/load|initiali/i.test(stage)) return 'Loading the on-device reader (first time takes a few seconds)…'
+  if (/recogni/i.test(stage)) return 'Reading the text on your receipt…'
+  return `${stage[0].toUpperCase()}${stage.slice(1)}…`
+}
+
+function ReaderResult({ extraction: x }) {
+  const blocking = x.flags.filter((f) => (f.severity ?? 'block') === 'block')
+  const soft = x.flags.filter((f) => f.severity === 'warn')
+  const engine = x.engineKind === 'ocr' ? 'free on-device OCR' : x.model === 'mock-vision-1' ? 'demo reader (sample receipt)' : x.model
+  const nothing = !x.unreadable && !x.merchant && x.total == null
+  return (
+    <div className="stack" style={{ '--stack': '10px' }}>
+      {blocking.length > 0 && (
+        <div className="card card-pad stack" style={{ '--stack': '10px', borderColor: 'rgba(214,143,134,0.45)' }}>
+          <span className="eyebrow" style={{ color: 'var(--rose)' }}>
+            Receipt agent · will reject
+          </span>
+          <h2>This receipt looks fraudulent.</h2>
+          <ul className="checks">
+            {blocking.map((f, i) => (
+              <li key={i} className="fail">
+                <Icon name="x" className="mark" style={{ color: 'var(--rose)' }} />
+                <span className="label-t">{f.message}</span>
+                {f.evidence && <span className="detail mono">“{f.evidence}”</span>}
+              </li>
+            ))}
+          </ul>
+          <p className="hint">
+            Text on a receipt is treated as data, never as instructions. If you submit, the attempt is logged and the claim stops
+            before it reaches a treasurer.
+          </p>
+        </div>
+      )}
+      {soft.length > 0 && (
+        <Notice tone="copper" title="Your treasurer will be asked to check this">
+          {soft.map((f) => f.message).join(' ')}
+        </Notice>
+      )}
+      {x.note && <Notice tone="ice">{x.note}</Notice>}
+      {x.unreadable && (
+        <Notice tone="ice" title="Couldn’t read this receipt">
+          {x.unreadable}
+        </Notice>
+      )}
+      <p className="hint">
+        Read by <span className="mono">{engine}</span>
+        {x.confidence > 0 && ` · confidence ${Math.round(x.confidence * 100)}%`}
+        {nothing && ' · nothing readable found, so type the details in'} ·{' '}
+        <Link to="/account" className="link">
+          change reader
+        </Link>
+      </p>
+    </div>
+  )
+}
+
 function ReceiptPicker({ onPick, samples, disabled }) {
   const [over, setOver] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -56,6 +115,12 @@ function ReceiptPicker({ onPick, samples, disabled }) {
   const readFile = async (file) => {
     if (!file) return
     const base = { kind: 'upload', fileName: file.name || 'receipt.jpg', mimeType: file.type, size: file.size }
+    if (file.type === 'application/pdf') {
+      if (file.size > 4_000_000) return onPick(base)
+      const reader = new FileReader()
+      reader.onload = () => onPick({ ...base, dataUrl: reader.result })
+      return reader.readAsDataURL(file)
+    }
     if (!file.type.startsWith('image/')) return onPick(base)
     setBusy(true)
     try {
@@ -107,10 +172,20 @@ function ReceiptPicker({ onPick, samples, disabled }) {
         <div className="hint">or click to choose a file</div>
       </label>
 
+      {isMock && (
+        <p className="hint">
+          No receipt to hand? Open{' '}
+          <Link to="/demo/receipts" className="link">
+            test receipts
+          </Link>{' '}
+          on another screen and photograph one, or pick a sample below.
+        </p>
+      )}
+
       {samples.length > 0 && (
         <div>
           <div className="eyebrow quiet" style={{ marginBottom: 6 }}>
-            {isMock ? 'Or try a demo receipt' : 'Sample receipts'}
+            {isMock ? 'Or use a demo receipt' : 'Sample receipts'}
           </div>
           <div className="sample-list">
             {samples.map((s) => (
@@ -158,7 +233,8 @@ export default function ClaimForm() {
   const [aiFilled, setAiFilled] = useState({})
   const [confirmed, setConfirmed] = useState(false)
   const [failed, setFailed] = useState(null)
-  const [extract, extractState] = useAction((r) => api.extractReceipt(r))
+  const [progress, setProgress] = useState(null)
+  const [extract, extractState] = useAction((r) => api.extractReceipt(r, { onProgress: setProgress }))
   const [submit, submitState] = useAction((payload) => api.submitClaim(payload))
   const initFor = useRef(null)
 
@@ -192,6 +268,7 @@ export default function ClaimForm() {
     setExtraction(null)
     setVerified(NONE_VERIFIED)
     setConfirmed(false)
+    setProgress(null)
     if (mode !== 'ai_prefill') return
     const res = await extract(rcp)
     if (!res.ok) return
@@ -223,6 +300,7 @@ export default function ClaimForm() {
     const mine = k === 'amount' ? Number(fields.amount) : fields[k]
     if (mine === ai) return null
     const shown = k === 'amount' ? fmtMoney(ai, extraction.currency ?? fields.currency) : k === 'category' ? CATEGORIES[ai] : ai
+    if (k === 'amount' && mine > ai) return `AI read ${shown}. If the AI misread it, keep your amount and your treasurer will check it against the receipt.`
     return `AI read: ${shown}`
   }
 
@@ -262,7 +340,9 @@ export default function ClaimForm() {
     )
 
   const review = existing?.latestReview
-  const showForm = mode === 'manual' || (mode === 'ai_prefill' && (extraction || reading)) || editing
+  // If reading fails the member still gets the form and types the details in.
+  const showForm = mode === 'manual' || (mode === 'ai_prefill' && receipt) || editing
+  const agentRejected = failed?.latest.validation.checks.some((c) => c.id === 'not_flagged' && !c.passed)
 
   return (
     <>
@@ -286,12 +366,15 @@ export default function ClaimForm() {
         {failed && (
           <div className="card card-pad stack" style={{ '--stack': '10px', borderColor: 'rgba(214,143,134,0.35)' }}>
             <span className="eyebrow" style={{ color: 'var(--rose)' }}>
-              Automated checks didn't pass
+              {agentRejected ? 'Rejected by the receipt agent' : 'Automated checks didn’t pass'}
             </span>
+            {agentRejected && <h2>This receipt can’t be claimed.</h2>}
             <p className="muted" style={{ fontSize: 14 }}>
-              Fix the fields below and resubmit, or withdraw the claim if it can't be fixed.
+              {agentRejected
+                ? 'The receipt shows signs of tampering or hidden instructions. Nothing was sent to your treasurer, and the attempt is on the audit log.'
+                : 'Fix the fields below and resubmit, or withdraw the claim if it can’t be fixed.'}
             </p>
-            <Checks validation={{ ...failed.latest.validation, checks: failed.latest.validation.checks.filter((c) => !c.passed) }} />
+            <Checks validation={failed.latest.validation} only={['fail']} />
             <div>
               <button
                 type="button"
@@ -399,27 +482,17 @@ export default function ClaimForm() {
               {reading ? (
                 <div className="card card-pad stack" style={{ '--stack': '12px' }}>
                   <div className="reading">
-                    <span className="spinner dark" /> Reading receipt…
+                    <span className="spinner dark" /> {progressLabel(progress)}
                   </div>
+                  {progress?.progress > 0 && (
+                    <div className="budget" aria-hidden="true">
+                      <span style={{ width: `${Math.round(progress.progress * 100)}%` }} />
+                    </div>
+                  )}
                   <p className="hint">The reader returns data only. It has no tools and can't approve or pay anything.</p>
                 </div>
               ) : (
-                extraction && (
-                  <div className="stack" style={{ '--stack': '10px' }}>
-                    {extraction.flags.length > 0 && (
-                      <Notice tone="rose" title="The reader flagged this receipt">
-                        {extraction.flags.map((f) => f.message).join(' ')} This will fail the automated checks. Instructions
-                        hidden in a receipt are never followed.
-                      </Notice>
-                    )}
-                    {mode === 'ai_prefill' && (
-                      <p className="hint">
-                        Read by <span className="mono">{extraction.model}</span> · confidence {Math.round(extraction.confidence * 100)}%
-                        {extraction.simulated && ' · demo: values come from a sample receipt'}
-                      </p>
-                    )}
-                  </div>
-                )
+                extraction && <ReaderResult extraction={extraction} />
               )}
 
               <ErrorText error={extractState.error} />

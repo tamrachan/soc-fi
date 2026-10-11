@@ -4,11 +4,12 @@ import { api } from '../data/api.js'
 import { useAction, useApi, useSession } from '../state/AppState.jsx'
 import { hasPerm } from '../domain/permissions.js'
 import { CATEGORIES } from '../data/schema.js'
-import { fmtDate, fmtMoney, shortAddr, toUsdc } from '../lib/format.js'
-import { FX_TO_USDC, NETWORKS } from '../config.js'
+import { fmtDate, fmtMoney, shortAddr } from '../lib/format.js'
+import { NETWORKS } from '../config.js'
 import Receipt from '../components/Receipt.jsx'
 import ClaimTimeline from '../components/ClaimTimeline.jsx'
 import LedgerSignModal from '../components/LedgerSignModal.jsx'
+import DecisionBar from '../components/DecisionBar.jsx'
 import { Checks, Empty, ErrorText, Icon, Loading, Notice, PageHead, StatusPill } from '../components/ui.jsx'
 
 function Comparison({ fields, ai }) {
@@ -47,116 +48,24 @@ function Comparison({ fields, ai }) {
   )
 }
 
-function DecisionPanel({ claim, onApproved }) {
-  const [decision, setDecision] = useState('approve')
-  const [reason, setReason] = useState('')
-  const [resolution, setResolution] = useState('edit_existing')
-  const [review, { pending, error }] = useAction((args) => api.reviewClaim(claim.id, args))
-  const f = claim.latest.fields
-  const usdc = toUsdc(f.amount, f.currency)
-  const r = claim.society.reimbursement
-
-  const submit = async (e) => {
-    e.preventDefault()
-    const res = await review({ decision, reason, resolution: decision === 'return' ? resolution : null, version: claim.currentVersion })
-    if (res.ok && decision === 'approve') onApproved(res.data)
-  }
-
+function NextActions({ nextId }) {
   return (
-    <form className="card" onSubmit={submit}>
-      <div className="card-head">
-        <h3>Your decision</h3>
-        <span className="mono faint" style={{ fontSize: 12 }}>
-          on version {claim.currentVersion}
-        </span>
-      </div>
-      <div className="card-pad stack" style={{ '--stack': '20px' }}>
-        <div className="seg" role="group" aria-label="Decision">
-          {[
-            ['approve', 'Approve'],
-            ['return', 'Return for edits'],
-            ['reject', 'Reject'],
-          ].map(([k, l]) => (
-            <button key={k} type="button" aria-pressed={decision === k} onClick={() => setDecision(k)}>
-              {l}
-            </button>
-          ))}
-        </div>
-
-        {decision === 'approve' && (
-          <>
-            <p className="muted" style={{ fontSize: 14 }}>
-              Your approval covers exactly these values. If the member changes anything, it comes back for review.
-            </p>
-            <dl className="kv">
-              <dt>Pay</dt>
-              <dd className="tnum" style={{ color: 'var(--white)' }}>
-                {fmtMoney(usdc, 'USDC')} <span className="faint">= {fmtMoney(f.amount, f.currency)} @ {FX_TO_USDC[f.currency]}</span>
-              </dd>
-              <dt>To</dt>
-              <dd>
-                <span className="addr">{claim.claimant.walletAddress}</span>
-                <span className="hint" style={{ display: 'block' }}>
-                  {claim.claimant.displayName}'s saved wallet
-                </span>
-              </dd>
-              <dt>From</dt>
-              <dd>
-                <span className="addr">{shortAddr(r.treasuryWallet)}</span> <span className="faint">· {claim.society.name} treasury</span>
-              </dd>
-              <dt>Network</dt>
-              <dd>
-                {r.token} on {NETWORKS[r.network]?.label ?? r.network}
-              </dd>
-            </dl>
-          </>
-        )}
-
-        {decision === 'return' && (
-          <>
-            <div className="field">
-              <span className="label">What should the member do?</span>
-              <label className="check">
-                <input type="radio" name="res" checked={resolution === 'edit_existing'} onChange={() => setResolution('edit_existing')} />
-                <span>
-                  Edit this claim <span className="hint" style={{ display: 'block' }}>Keeps the history. Their changes become a new version you review again.</span>
-                </span>
-              </label>
-              <label className="check">
-                <input type="radio" name="res" checked={resolution === 'start_new'} onChange={() => setResolution('start_new')} />
-                <span>
-                  Start a new claim <span className="hint" style={{ display: 'block' }}>For a different receipt or a substantially different claim.</span>
-                </span>
-              </label>
-            </div>
-            <div className="field">
-              <label htmlFor="reason">Instructions for the member</label>
-              <textarea id="reason" className="textarea" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Remove the shampoo (£4.50). It's a personal item, not baking ingredients." />
-            </div>
-          </>
-        )}
-
-        {decision === 'reject' && (
-          <div className="field">
-            <label htmlFor="reason">Reason (shared with the member)</label>
-            <textarea id="reason" className="textarea" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Personal expense, not linked to a society event." />
-          </div>
-        )}
-
-        <ErrorText error={error} />
-        <button
-          className={`btn ${decision === 'reject' ? 'btn-danger' : 'btn-primary'} btn-block`}
-          disabled={pending || (decision !== 'approve' && !reason.trim())}
-        >
-          {pending ? 'Saving…' : decision === 'approve' ? 'Approve and sign on Ledger' : decision === 'return' ? 'Return to member' : 'Reject claim'}
-        </button>
-        {decision === 'approve' && <p className="hint" style={{ textAlign: 'center' }}>Nothing is paid until you sign on the device.</p>}
-      </div>
-    </form>
+    <div className="row">
+      {nextId ? (
+        <Link to={`/review/${nextId}`} className="btn btn-primary">
+          Next claim <Icon name="arrow" />
+        </Link>
+      ) : (
+        <span className="faint" style={{ fontSize: 14 }}>Queue is clear.</span>
+      )}
+      <Link to="/review" className="btn btn-quiet">
+        Back to queue
+      </Link>
+    </div>
   )
 }
 
-function PaymentPanel({ claim, onOpenLedger }) {
+function PaymentPanel({ claim, onOpenLedger, nextId }) {
   const p = claim.payment
   const [retry, retryState] = useAction(() => api.retryPayment(p.id))
   const [reconcile, recState] = useAction(() => api.reconcilePayment(p.id))
@@ -201,6 +110,7 @@ function PaymentPanel({ claim, onOpenLedger }) {
             <span className="spinner dark" /> Waiting for on-chain confirmation…
           </div>
           <p className="hint">Not marked paid until it's confirmed.</p>
+          <NextActions nextId={nextId} />
         </>
       )}
       {claim.status === 'needs_reconciliation' && (
@@ -214,9 +124,12 @@ function PaymentPanel({ claim, onOpenLedger }) {
         </>
       )}
       {claim.status === 'paid' && (
-        <Notice tone="sage" title={`Paid ${fmtMoney(p.amount, 'USDC')}`}>
-          Confirmed on {NETWORKS[p.network]?.label}.
-        </Notice>
+        <>
+          <Notice tone="sage" title={`Paid ${fmtMoney(p.amount, 'USDC')}`}>
+            Confirmed on {NETWORKS[p.network]?.label}.
+          </Notice>
+          <NextActions nextId={nextId} />
+        </>
       )}
       {p.txHash && (
         <dl className="kv">
@@ -237,12 +150,14 @@ export default function ReviewDetail() {
   const { id } = useParams()
   const session = useSession()
   const { data: claim, error } = useApi(() => api.getClaim(id), [id])
+  const { data: queue = [] } = useApi(() => api.listReviewClaims(), [session.user.id])
   const { data: sample } = useApi(
     () => (claim?.latest.receipt.kind === 'sample' ? api.getReceipt(claim.latest.receipt.sampleId) : Promise.resolve(null)),
     [claim?.latest.receipt.sampleId],
   )
   const [reveal, setReveal] = useState(false)
   const [ledgerOpen, setLedgerOpen] = useState(false)
+  const [decidedOn, setDecidedOn] = useState(null)
 
   if (error) return <Empty title="Couldn't open claim">{error.message}</Empty>
   if (!claim) return <Loading />
@@ -253,6 +168,9 @@ export default function ReviewDetail() {
   const discarded = Object.entries(x?.discardedFields ?? {})
   const own = claim.claimantId === session.user.id
   const canDecide = claim.status === 'pending_review' && !own && hasPerm(session, claim.societyId, 'claims.approve')
+  const nextId = queue.find((c) => c.status === 'pending_review' && c.id !== claim.id && c.claimantId !== session.user.id)?.id
+  const first = claim.claimant.displayName.split(' ')[0]
+  const justDecided = decidedOn === claim.id && ['returned', 'rejected'].includes(claim.status)
 
   return (
     <>
@@ -268,13 +186,41 @@ export default function ReviewDetail() {
             {fmtMoney(v.fields.amount, v.fields.currency)} <em>at {v.fields.merchant}</em>
           </>
         }
-        lede={`Submitted by ${claim.claimant.displayName} · “${v.fields.description}”`}
+        lede={`${claim.claimant.displayName} · “${v.fields.description}”`}
       >
         <StatusPill status={claim.status} />
       </PageHead>
 
+      <div className="stack" style={{ '--stack': '16px', marginBottom: 32 }}>
+        {justDecided && (
+          <div className="card card-pad stack" style={{ '--stack': '14px' }}>
+            <span className="eyebrow">{claim.status === 'returned' ? 'Edits requested' : 'Claim denied'}</span>
+            <h2>{claim.status === 'returned' ? `Sent back to ${first}.` : `${first} has been told why.`}</h2>
+            <p className="muted" style={{ fontSize: 14 }}>“{claim.latestReview?.reason}”</p>
+            <NextActions nextId={nextId} />
+          </div>
+        )}
+        {canDecide && (
+          <DecisionBar
+            key={`${claim.id}-${claim.currentVersion}`}
+            claim={claim}
+            onApproved={() => setLedgerOpen(true)}
+            onDecided={() => {
+              setDecidedOn(claim.id)
+              window.scrollTo({ top: 0, behavior: 'smooth' })
+            }}
+          />
+        )}
+        {own && claim.status === 'pending_review' && (
+          <Notice tone="ice" title="This is your own claim">
+            Another authorised reviewer has to decide on it.
+          </Notice>
+        )}
+        {claim.payment && <PaymentPanel claim={claim} nextId={nextId} onOpenLedger={() => setLedgerOpen(true)} />}
+      </div>
+
       <div className="split">
-        <div className="stack sticky" style={{ '--stack': '12px' }}>
+        <div className="stack sticky claim-receipt" style={{ '--stack': '12px' }}>
           <Receipt receipt={v.receipt} revealHidden={reveal} />
           {sample?.hiddenText && (
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setReveal((r) => !r)}>
@@ -299,7 +245,7 @@ export default function ReviewDetail() {
                   {discarded.map(([k, val]) => (
                     <tr key={k}>
                       <td className="mono faint">{k}</td>
-                      <td className="mono" style={{ color: 'var(--rose)', textDecoration: 'line-through' }}>
+                      <td className="mono" style={{ color: 'var(--rose)', textDecoration: 'line-through', overflowWrap: 'anywhere' }}>
                         {String(val)}
                       </td>
                     </tr>
@@ -307,13 +253,11 @@ export default function ReviewDetail() {
                 </tbody>
               </table>
               <p style={{ fontSize: 14 }}>
-                If approved, payment goes to <span className="addr">{shortAddr(claim.claimant.walletAddress)}</span>,{' '}
-                {claim.claimant.displayName}'s saved wallet. Your Ledger will show that address.
+                If approved, payment goes to <span className="addr">{shortAddr(claim.claimant.walletAddress)}</span>, {first}'s saved
+                wallet. Your Ledger will show that address.
               </p>
             </div>
           )}
-
-          {claim.payment && <PaymentPanel claim={claim} onOpenLedger={() => setLedgerOpen(true)} />}
 
           <section>
             <div className="section-head">
@@ -324,14 +268,19 @@ export default function ReviewDetail() {
             </div>
             <Comparison fields={v.fields} ai={x} />
             <p className="hint" style={{ marginTop: 10 }}>
-              You can't edit the member's values. If something's wrong, return the claim.
+              You can't edit {first}'s values. If something's wrong, request edits.
             </p>
+            {x?.rawTextExcerpt && (
+              <details style={{ marginTop: 16 }}>
+                <summary>What the reader saw ({x.model})</summary>
+                <pre className="raw-text">{x.rawTextExcerpt}</pre>
+              </details>
+            )}
           </section>
 
           <section>
             <div className="section-head">
               <h2>Automated checks</h2>
-              <span className="mono faint">{v.validation.checks.filter((c) => c.passed).length}/7</span>
             </div>
             <Checks validation={v.validation} />
           </section>
@@ -350,13 +299,6 @@ export default function ReviewDetail() {
             </dl>
           </section>
 
-          {own && claim.status === 'pending_review' && (
-            <Notice tone="ice" title="This is your own claim">
-              Another authorised reviewer has to decide on it.
-            </Notice>
-          )}
-          {canDecide && <DecisionPanel claim={claim} onApproved={() => setLedgerOpen(true)} />}
-
           <section>
             <div className="section-head">
               <h2>History</h2>
@@ -366,7 +308,13 @@ export default function ReviewDetail() {
         </div>
       </div>
 
-      {ledgerOpen && claim.payment && <LedgerSignModal payment={claim.payment} claim={claim} onClose={() => setLedgerOpen(false)} />}
+      {ledgerOpen && claim.payment && (
+        <LedgerSignModal
+          payment={claim.payment}
+          claim={claim}
+          onClose={() => setLedgerOpen(false)}
+        />
+      )}
     </>
   )
 }

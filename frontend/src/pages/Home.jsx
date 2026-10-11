@@ -1,10 +1,19 @@
-import { Link, useNavigate } from 'react-router-dom'
-import { api, isMock } from '../data/api.js'
+import { Link } from 'react-router-dom'
+import { api } from '../data/api.js'
 import { useApi, useSession } from '../state/AppState.jsx'
 import { claimableSocieties, isReviewer, societiesWithPerm } from '../domain/permissions.js'
 import { fmtMoney, relTime } from '../lib/format.js'
-import { UNION_NAME } from '../config.js'
 import { Icon, StatusPill } from '../components/ui.jsx'
+import HowItWorksStory from '../components/story/HowItWorksStory.jsx'
+
+function ScrollCue() {
+  return (
+    <div className="scroll-cue" aria-hidden="true">
+      <span className="mono">Scroll to see how it works</span>
+      <span className="scroll-cue-line" />
+    </div>
+  )
+}
 
 function Boundary() {
   return (
@@ -28,7 +37,7 @@ function Boundary() {
           </ol>
         </div>
         <div>
-          <h3>Only the treasurer, on a Ledger</h3>
+          <h3>Only the Union treasurer, on a Ledger</h3>
           <ol>
             <li>Approves one exact version of a claim</li>
             <li>Sees the real amount and recipient on the device's own screen</li>
@@ -41,82 +50,62 @@ function Boundary() {
   )
 }
 
+const HERO_POINTS = [
+  ['Snap the receipt', 'An AI fills in your claim in seconds. You check it and submit.'],
+  ['Paid in minutes', 'USDC goes straight to the wallet on your account. No forms, no week-long wait.'],
+  ['Secured by hardware', 'The AI can’t pay anyone. Only the Union treasurer’s Ledger can release money.'],
+]
+
 function Landing() {
-  const navigate = useNavigate()
   return (
     <>
       <section className="hero" style={{ marginTop: -40 }}>
         <div className="hero-grid">
-          <div className="stack" style={{ '--stack': '24px' }}>
-            <span className="eyebrow">{UNION_NAME} · USDC pilot</span>
+          <div className="stack" style={{ '--stack': '28px' }}>
             <h1 className="display">
-              Snap the receipt. <em>The treasurer signs.</em>
+              Society Finance, <em>secured.</em>
             </h1>
-            <p className="lede">
-              Bought the pizza for the Blockchain hackathon, or the flour for Baking Society? Photograph the receipt and an
-              AI checks it in seconds. It can't pay anyone, though. Only your society treasurer's Ledger can release the money.
-            </p>
+            <ul className="hero-points">
+              {HERO_POINTS.map(([title, body]) => (
+                <li key={title}>
+                  <Icon name="check" className="hero-tick" />
+                  <span>
+                    <b>{title}.</b> {body}
+                  </span>
+                </li>
+              ))}
+            </ul>
             <div className="row" style={{ gap: 12 }}>
               <Link to="/signup" className="btn btn-primary">
                 Create account <Icon name="arrow" />
               </Link>
-              <button type="button" className="btn btn-ghost" onClick={() => document.getElementById('personas')?.scrollIntoView({ behavior: 'smooth' })}>
-                Explore the demo
+              <button type="button" className="btn btn-ghost" onClick={() => document.querySelector('.how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>
+                See how it works
               </button>
             </div>
           </div>
-          <div className="card card-pad stack" style={{ '--stack': '0px' }}>
-            <div className="eyebrow quiet" style={{ marginBottom: 14 }}>
-              Claim lifecycle
-            </div>
-            {[
-              ['01', 'Member snaps receipt', 'AI suggests the fields'],
-              ['02', 'Member checks every field', 'and confirms'],
-              ['03', 'Seven rules run', 'amount, duplicate, budget, category, date, limit, flags'],
-              ['04', 'Treasurer approves on Ledger', 'the only step that moves money'],
-              ['05', 'USDC lands in saved wallet', 'marked paid on confirmation'],
-            ].map(([n, t, s]) => (
-              <div key={n} style={{ display: 'grid', gridTemplateColumns: '32px 1fr', gap: '2px 0', padding: '12px 0', borderTop: '1px solid var(--line)' }}>
-                <span className="mono faint">{n}</span>
-                <span style={{ color: n === '04' ? 'var(--copper)' : 'var(--white)' }}>{t}</span>
-                <span className="faint" style={{ fontSize: 13, gridColumn: 2 }}>
-                  {s}
-                </span>
-              </div>
-            ))}
+          <ScrollCue />
+        </div>
+      </section>
+
+      <HowItWorksStory />
+
+      <section className="cta-band">
+        <div className="stack" style={{ '--stack': '20px' }}>
+          <span className="eyebrow ruled">Your turn</span>
+          <h2 className="cta-title">
+            Spent money on a society event? <em>Get it back.</em>
+          </h2>
+          <p className="lede">Create an account with your university email, join your society, and submit your first receipt in under a minute.</p>
+          <div className="row" style={{ gap: 12 }}>
+            <Link to="/signup" className="btn btn-primary">
+              Create account <Icon name="arrow" />
+            </Link>
           </div>
         </div>
       </section>
 
-      <div style={{ marginTop: 56 }}>
-        <Boundary />
-      </div>
-
-      {isMock && api.demo && (
-        <section className="section" id="personas">
-          <div className="section-head">
-            <div className="stack" style={{ '--stack': '10px' }}>
-              <span className="eyebrow ruled">Demo personas</span>
-              <h2>Step into a role.</h2>
-            </div>
-          </div>
-          <div className="grid grid-4">
-            {api.demo.personas.map((p) => (
-              <button
-                key={p.id}
-                className="persona"
-                onClick={() => {
-                  api.demo.switchUser(p.id)
-                  navigate('/')
-                }}
-              >
-                <span className="who">{p.label}</span>
-                <span className="what">{p.hint}</span>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
+      <Boundary />
     </>
   )
 }

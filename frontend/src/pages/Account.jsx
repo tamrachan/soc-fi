@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { api } from '../data/api.js'
+import { api, isMock } from '../data/api.js'
+import ReaderSettings from '../components/ReaderSettings.jsx'
 import { useAction, useSession } from '../state/AppState.jsx'
 import { ROLE_LABELS } from '../data/schema.js'
 import { fmtDate } from '../lib/format.js'
@@ -40,6 +41,7 @@ export default function Account() {
               ['/payments', 'Payments', societiesWithPerm(session, 'payments.initiate').length > 0],
               ['/setup', 'Treasury setup', societiesWithPerm(session, 'society.configure_reimbursement').length > 0],
               ['/audit', 'Audit log', true],
+              ['/demo/receipts', 'Test receipts (demo)', isMock],
             ]
               .filter(([, , show]) => show)
               .map(([to, label]) => (
@@ -90,6 +92,8 @@ export default function Account() {
               {saved && <span className="faint" style={{ fontSize: 13 }}>Saved</span>}
             </div>
           </form>
+
+          {isMock && <ReaderSettings />}
         </section>
 
         <section>

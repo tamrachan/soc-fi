@@ -3,7 +3,8 @@ import { useApi } from '../state/AppState.jsx'
 import { fmtDate, fmtMoney } from '../lib/format.js'
 
 /** Renders a receipt reference: a sample as thermal paper, or an uploaded file preview. */
-export default function Receipt({ receipt, revealHidden = false }) {
+/** printable: render hidden text faint but legible, so a phone camera and the reader can pick it up. */
+export default function Receipt({ receipt, revealHidden = false, printable = false }) {
   const { data: sample } = useApi(
     () => (receipt?.kind === 'sample' ? api.getReceipt(receipt.sampleId) : Promise.resolve(null)),
     [receipt?.kind, receipt?.sampleId],
@@ -61,7 +62,7 @@ export default function Receipt({ receipt, revealHidden = false }) {
         </div>
         <div className="r-rule" />
         <div className="r-faint" style={{ textAlign: 'center' }}>Thank you — please keep this receipt</div>
-        {sample.hiddenText && <p className={`r-hidden ${revealHidden ? 'revealed' : ''}`}>{sample.hiddenText}</p>}
+        {sample.hiddenText && <p className={`r-hidden ${revealHidden ? 'revealed' : printable ? 'printable' : ''}`}>{sample.hiddenText}</p>}
       </article>
     </div>
   )

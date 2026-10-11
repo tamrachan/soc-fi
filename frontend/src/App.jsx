@@ -16,6 +16,8 @@ import ReviewQueue from './pages/ReviewQueue.jsx'
 import ReviewDetail from './pages/ReviewDetail.jsx'
 import Payments from './pages/Payments.jsx'
 import AuditLog from './pages/AuditLog.jsx'
+import DemoReceipts from './pages/DemoReceipts.jsx'
+import HowItWorks from './pages/HowItWorks.jsx'
 
 export default function App() {
   return (
@@ -37,6 +39,8 @@ export default function App() {
         <Route path="review/:id" element={<ReviewDetail />} />
         <Route path="payments" element={<Payments />} />
         <Route path="audit" element={<AuditLog />} />
+        <Route path="demo/receipts" element={<DemoReceipts />} />
+        <Route path="how-it-works" element={<HowItWorks />} />
         <Route
           path="*"
           element={

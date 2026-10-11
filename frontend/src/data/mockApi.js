@@ -11,14 +11,14 @@ import receiptsSeed from './mock/receipts.json'
 import { ApiError } from './errors.js'
 import { ROLE_PERMISSIONS, COMMITTEE_ROLES } from './schema.js'
 import { runChecks } from '../domain/rules.js'
-import { simulateExtraction } from '../domain/aiExtract.js'
+import { readReceipt } from '../domain/reader/index.js'
 import { matchCommitteeRecord } from '../domain/committeeMatch.js'
 import { round2, toUsdc, isEvmAddress } from '../lib/format.js'
 import { FX_TO_USDC, UNI_EMAIL_SUFFIX } from '../config.js'
 
 // Bump the version whenever the seed data changes, so browsers drop their old copy.
-const DB_KEY = 'countersign.db.v2'
-const SESSION_KEY = 'countersign.session.v2'
+const DB_KEY = 'socfi.db.v2'
+const SESSION_KEY = 'socfi.session.v1'
 const DEFAULT_USER = 'usr_amara'
 const DEMO_CODE = '482913'
 
@@ -408,10 +408,12 @@ export const mockApi = {
     return out(db.receipts.find((r) => r.id === sampleId) ?? null)
   },
 
-  async extractReceipt(receipt) {
+  // Demo: the reader runs in this browser (free OCR, or Claude with the user's own key).
+  // Production: the backend runs it, so the AI key never reaches a client.
+  async extractReceipt(receipt, { onProgress } = {}) {
     requireVerified()
-    await wait(1800)
-    return simulateExtraction(receipt, db.receipts)
+    if (receipt?.kind === 'sample') await wait(1600) // sample reads are instant; pause so the demo shows the step
+    return readReceipt(receipt, { samples: db.receipts, onProgress })
   },
 
   // ----- claims -----

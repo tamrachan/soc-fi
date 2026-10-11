@@ -17,8 +17,8 @@ export const CLAIM_STATUS = {
 export const CLAIM_STATUS_META = {
   validation_failed: { label: 'Needs fixing', tone: 'rose', member: 'Some automated checks failed. Fix the fields and resubmit.' },
   pending_review: { label: 'In review', tone: 'ice', member: 'Waiting for your treasurer to review.' },
-  returned: { label: 'Returned', tone: 'copper', member: 'Your treasurer asked for changes.' },
-  rejected: { label: 'Rejected', tone: 'rose', member: 'This claim will not be paid.' },
+  returned: { label: 'Edits requested', tone: 'copper', member: 'Your treasurer asked for changes.' },
+  rejected: { label: 'Denied', tone: 'rose', member: 'This claim will not be paid.' },
   approved: { label: 'Approved', tone: 'copper', member: 'Approved — waiting for the treasurer to sign on their Ledger.' },
   awaiting_ledger: { label: 'Awaiting Ledger', tone: 'copper', member: 'Approved — waiting for the treasurer to sign on their Ledger.' },
   payment_pending: { label: 'Payment pending', tone: 'ice', member: 'Payment sent, waiting for network confirmation.' },
@@ -103,7 +103,7 @@ export const CHECKS = [
   { id: 'allowed_category', label: 'Category allowed by society policy' },
   { id: 'recent_date', label: 'Receipt is recent' },
   { id: 'under_limit', label: 'Under the per-claim limit' },
-  { id: 'not_flagged', label: 'No suspicious content flagged' },
+  { id: 'not_flagged', label: 'No signs of fraud or hidden instructions' },
 ]
 
 export const REIMBURSEMENT_STATUS = {

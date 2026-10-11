@@ -3,10 +3,11 @@ import { api, isMock } from '../data/api.js'
 import { useApi, useSession } from '../state/AppState.jsx'
 import { claimableSocieties, isReviewer, societiesWithPerm } from '../domain/permissions.js'
 import { initials } from '../lib/format.js'
-import { APP_NAME, UNION_NAME } from '../config.js'
+import { readerLabel } from '../lib/readerSettings.js'
+import { APP_NAME, TAGLINE, UNION_NAME } from '../config.js'
 import { Icon, Loading } from './ui.jsx'
 
-const PUBLIC_PATHS = ['/', '/signup']
+const PUBLIC_PATHS = ['/', '/signup', '/demo/receipts', '/how-it-works']
 
 function DemoStrip({ user }) {
   const navigate = useNavigate()
@@ -35,6 +36,12 @@ function DemoStrip({ user }) {
           {user && !known && <option value={user.id}>{user.displayName} — new account</option>}
           <option value="">Signed out — new student</option>
         </select>
+        <Link to="/demo/receipts" className="hide-sm" style={{ color: 'var(--fog)' }}>
+          Test receipts
+        </Link>
+        <Link to="/account" className="hide-sm" style={{ color: 'var(--fog)' }}>
+          Reader: {readerLabel().startsWith('Claude') ? 'Claude' : 'OCR'}
+        </Link>
         <button
           onClick={() => {
             api.demo.reset()
@@ -114,7 +121,7 @@ export default function Layout() {
           <NavLink to="/" className="brand" aria-label={`${APP_NAME} home`}>
             <span className="brand-mark" aria-hidden="true" />
             <span className="brand-word">{APP_NAME}</span>
-            <span className="brand-tag">St Andrews societies</span>
+            <span className="brand-tag">{TAGLINE}</span>
           </NavLink>
           {verified && (
             <nav className="nav" aria-label="Main">
@@ -154,9 +161,12 @@ export default function Layout() {
       <footer className="footer">
         <div className="container">
           <span>
-            {APP_NAME} · a pilot for {UNION_NAME}
+            {APP_NAME} · {TAGLINE} A pilot for {UNION_NAME}
           </span>
-          <span className="mono">The agent reads receipts. Only a treasurer's Ledger can release money.</span>
+          <Link to="/how-it-works" className="link">
+            How it works
+          </Link>
+          <span className="mono">The agent reads receipts. Only the Union's Ledger can release money.</span>
         </div>
       </footer>
     </div>

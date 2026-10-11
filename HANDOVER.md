@@ -128,12 +128,20 @@ The UI also expects these joined fields on reads (see `claimView` in mockApi):
          | { kind: 'sample', sampleId },                               // demo receipts only
   aiExtraction: {
     merchant, date, total, currency, suggestedCategory, confidence: 0..1,
-    flags: [{ code: 'prompt_injection' | …, message }],
-    discardedFields: { [key]: any },   // anything the model returned outside the schema
-    model, extractedAt
+    items: [{ desc, amount }],          // line items, used for the arithmetic check
+    flags: [{ code: 'prompt_injection' | 'wallet_address_on_receipt' | 'total_mismatch',
+              severity: 'block' | 'warn', message, evidence? }],
+    discardedFields: { [key]: any },   // anything outside the schema, plus walletAddressInText
+    rawTextExcerpt,                     // first 2,000 chars of what the reader saw (shown to the treasurer)
+    model, engineKind: 'model' | 'ocr', unreadable?, note?, extractedAt
   },
   memberConfirmedAt, submittedAt,
-  validation: { passed: bool, ranAt, checks: [{ id, passed, detail }] }
+  validation: {
+    passed: bool,                       // true when no check has status 'fail'
+    warnings: number,                   // checks with status 'warn': the treasurer must look
+    ranAt,
+    checks: [{ id, status: 'pass' | 'warn' | 'fail', passed: bool, detail }]
+  }
 }
 ```
 **Receipt photos (mobile).** The member photographs the receipt with the phone camera (`<input capture="environment">`). Before anything is uploaded, the browser downscales the photo to a JPEG at most 1400px on the long edge, quality 0.78 (`src/lib/image.js`). That's typically 150–400 KB. PDFs and images the browser can't decode (e.g. HEIC on desktop) are passed through unchanged.
@@ -217,7 +225,7 @@ All methods are async. "Session" means the signed-in, verified user unless noted
 | `requestUnionApproval(societyId)` | | — | the other 4 steps are done |
 | `enableReimbursement(societyId)` | | reimbursement | all 5 steps done |
 | `listSampleReceipts()` / `getReceipt(sampleId)` | | | demo only |
-| `extractReceipt(receipt)` | | aiExtraction | runs the AI server-side; strips non-schema keys into `discardedFields` |
+| `extractReceipt(receipt, {onProgress?})` | | aiExtraction | runs the AI server-side; strips non-schema keys into `discardedFields`; runs the fraud scan (§5.11). `onProgress({stage, progress})` is optional |
 | `listMyClaims()` | | `[claimView]` | |
 | `listReviewClaims()` | | `[claimView]` for societies where the user has `claims.review` | |
 | `getClaim(id)` | | claimView | claimant, or `claims.view_society` |
@@ -239,8 +247,11 @@ All methods are async. "Session" means the signed-in, verified user unless noted
 
 The front-end enforces these too, but **the server is authoritative**.
 
-1. **The AI never submits, approves or pays.** `extractReceipt` returns data only. Any key outside `merchant, date, total, currency, suggestedCategory, confidence, flags` goes into `discardedFields` and is ignored.
-2. **The 7 checks** are in `src/domain/rules.js` (port or import it into Functions). `amount_matches` passes if the claimed amount is **at most** the receipt total, so a member can claim part of a receipt (e.g. leave out a personal item). Claiming more than the total fails. The other checks are `not_duplicate`, `within_budget`, `allowed_category`, `recent_date` (≤ 90 days), `under_limit`, `not_flagged`. Re-run them server-side on every submit. Never trust `validation` from the client. If the client sends no `aiExtraction` (manual entry), the server reads the receipt itself.
+1. **The AI never submits, approves or pays.** `extractReceipt` returns data only. Any key outside the extraction schema (`src/domain/reader/index.js` → `EXTRACTION_FIELDS`) goes into `discardedFields` and is ignored.
+2. **The 7 checks** are in `src/domain/rules.js` (port or import it into Functions). Each returns `pass`, `warn` or `fail`. **Only `fail` stops a claim**; `warn` lets it through and is shown to the treasurer as "things to check".
+   - `amount_matches` never fails, because the AI can misread a photo and the member must not be stuck. Equal or less than the read total (a partial claim) → `pass`. More than the read total, a different currency, or no total found → `warn`.
+   - `not_flagged`: any `block` flag → `fail`; only `warn` flags → `warn`.
+   - The other checks are `not_duplicate`, `within_budget`, `allowed_category`, `recent_date` (≤ 90 days), `under_limit`, `not_flagged`. Re-run them server-side on every submit. Never trust `validation` from the client. If the client sends no `aiExtraction` (manual entry), the server reads the receipt itself.
 3. **Server-side re-extraction.** Even when the client sends `aiExtraction`, production should re-extract from the stored receipt rather than trust the browser's copy.
 4. **Separation of duties.** A reviewer can't review their own claim. `logistics_coordinator` can't review, approve or pay.
 5. **Version binding.** `reviewClaim` must receive `version === currentVersion`, otherwise `aborted`. Approval sets `approvedVersion`. Payment is blocked if `currentVersion !== approvedVersion`. Editing a returned claim creates a new version, so a previous approval never carries over.
@@ -249,6 +260,19 @@ The front-end enforces these too, but **the server is authoritative**.
 8. **Uncertain outcome:** set `needs_reconciliation` and look up `txHash` before allowing any retry, so nobody is paid twice.
 9. **Reimbursement stays disabled** until committee verification, treasury wallet, Ledger pairing, policy and Union approval are all done. Any setup change resets Union approval.
 10. **Audit log** on: committee claims (all outcomes), permission grants, membership decisions, setup changes, enablement, submissions, reviews, device confirm/reject, payment confirmation and reconciliation.
+11. **Fraud scan runs on everything the reader saw, in plain code** (`src/domain/reader/injection.js`, plus the arithmetic check in `reader/index.js`). It doesn't rely on the AI noticing:
+    - **Text instructing an AI** (ignore rules, "note to AI", pre-approved, pay this address, mark urgent) → `prompt_injection`, `block`.
+    - **Any crypto wallet address printed on the receipt** → `wallet_address_on_receipt`, `block`. The address is also copied into `discardedFields.walletAddressInText`.
+    - **Line items that don't add up to the printed total** → `total_mismatch`. This is `block` when a model read the receipt, and `warn` for OCR, because OCR can miss lines.
+
+### Receipt reader (production)
+Run the reader in a Cloud Function, with the Claude API key held in Ledger Key Ring (CONTEXT.md must-have). The demo's browser version is in `src/domain/reader/claudeReader.js`. Port it as is:
+- **Call:** `client.messages.parse` with `output_config.format = jsonSchemaOutputFormat(RECEIPT_SCHEMA)` and effort `low`.
+- **Model:** `claude-opus-5-5` by default; `claude-haiku-5-5` is the cheaper option.
+- **The schema has no payee, amount override or approval field,** so the model can't return one. Text that tries to instruct it is reported in `suspiciousText` instead.
+- **Refusals:** on `stop_reason: 'refusal'` or any API error, the demo falls back to the free OCR reader.
+
+The demo's free reader is Tesseract.js running in the browser, with a contrast boost (`reader/enhance.js`) so faint grey thermal print is readable.
 
 ---
 
@@ -275,7 +299,39 @@ The device screen in the modal shows `Reimburse claim · {society} · {reference
 
 ---
 
+## 8. Confirmed flow (2026-10-11): the app isn't aligned yet
+
+The team confirmed this flow. The landing-page animation (`src/components/story/`) shows it. The working app and the schema above still use the older per-society-treasurer model, so **check with front-end before building these parts**:
+
+| Confirmed flow | App today | Likely schema change |
+|---|---|---|
+| The **Union** holds the Ledger wallet | Each society has `reimbursement.treasuryWallet` and its own Ledger | Move the treasury, Ledger device and payment source to a single `union` doc. Keep per-society budget and policy |
+| The **Union treasurer** reviews and approves | The society treasurer (`claims.review` on a society membership) | New union-level role, e.g. `unionRoles/{uid}: { role: 'union_treasurer' }`, with review rights across all societies |
+| A society **committee member** submits | Any member with `claims.create` | Probably restrict `claims.create` to committee roles. To be decided |
+| Checker rejects → ticket back to the member, who can **override** | A failed claim can only be fixed or withdrawn | New status (e.g. `override_requested`) plus `version.override = { reason, at }`; the claim enters review with the failed checks shown as warnings |
+| **Email the Union treasurer only when a claim is submitted**, never at the moment something is flagged. The email includes the claim, the event (`fields.description`), the amount, and every `warn` check (e.g. "Amount differs from the AI read (£14.59)") | No emails | Cloud Function on submit (status → `pending_review`) |
+| In review, each warning is shown **under the field it concerns** (e.g. under Amount) | Warnings listed in a summary card | Front-end change; no schema change needed (map check id → field: `amount_matches` → amount) |
+| Payment goes to the member's saved crypto address | Same | No change |
+
 ## Changelog
+
+- **2026-10-11 (d):**
+  - **Email rule added to §8:** the Union treasurer is emailed on submit, with warnings included; nothing is sent at flag time.
+  - **Demo claims** now name the event ("…hackathon with Ledger"). Mock storage key bumped to `socfi.db.v2`.
+- **2026-10-11 (c):**
+  - **The app is now called SocFi** ("Society Finance, secured."); `APP_NAME` and `TAGLINE` are in `src/config.js`.
+  - **Mock localStorage keys** renamed to `socfi.*` (`socfi.db.v1`, `socfi.session.v1`, `socfi.reader`, `socfi.lastSociety`). Old demo data is discarded.
+  - **Animation:** the Ledger step now shows a hardware wallet with physical buttons, pressed by a finger.
+- **2026-10-11 (b):**
+  - **Scroll animation** on the landing page and `/how-it-works`, built with anime.js v4. It shows the confirmed Union flow.
+  - **Confirmed flow recorded in §8.** The app and schema haven't been changed yet.
+- **2026-10-11:**
+  - **Real receipt reading.** Free on-device OCR (Tesseract.js) by default; optional Claude vision reader with a key typed in on the Account page (demo only). Replaces the simulated reader that copied values from a sample receipt.
+  - **Checks are now `pass` / `warn` / `fail`.** A member amount that disagrees with the AI is a `warn` for the treasurer, not a block. This fixes members being unable to submit when the AI misread the total.
+  - **New fraud flags:** `wallet_address_on_receipt`, and `total_mismatch` (catches altered totals). Flags carry `severity`.
+  - **Extraction shape:** added `items`, `rawTextExcerpt`, `engineKind`, `unreadable` and `note`. `extractReceipt` accepts an optional `{ onProgress }`.
+  - **Display labels only:** the `rejected` status shows as "Denied" and `returned` as "Edits requested". The stored enum values are unchanged.
+  - **New sample receipt** `rcp_altered` (altered total). Mock storage key bumped to `countersign.db.v3`.
 
 - **2026-10-10 (b):**
   - **Seed data is now St Andrews.** Email domain is `@st-andrews.ac.uk`. Society IDs changed: `soc_blockchain` and `soc_baking` are enabled; `soc_fintech` is mid-setup; `soc_staai`, `soc_stacs`, `soc_chess`, `soc_breakaway` and `soc_film` are disabled. Society names come from the Your Union directory. All people, wallets, IDs and receipts are fictional.

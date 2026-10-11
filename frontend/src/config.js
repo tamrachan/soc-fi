@@ -1,4 +1,5 @@
-export const APP_NAME = 'Countersign'
+export const APP_NAME = 'SocFi'
+export const TAGLINE = 'Society Finance, secured.'
 export const UNIVERSITY = 'University of St Andrews'
 export const UNION_NAME = "St Andrews Students' Association"
 export const UNION_SHORT = 'Your Union'

@@ -1,4 +1,5 @@
 import { CHECKS, CLAIM_STATUS_META, PAYMENT_STATUS_META } from '../data/schema.js'
+import { checkStatus } from '../domain/rules.js'
 
 const ICONS = {
   check: 'M4 10.5l3.5 3.5L16 5.5',
@@ -66,7 +67,13 @@ export function ErrorText({ error }) {
   return <p className="error-text" role="alert">{error.message ?? String(error)}</p>
 }
 
-export function Checks({ validation }) {
+const CHECK_LOOK = {
+  pass: { icon: 'check', color: 'var(--sage)' },
+  warn: { icon: 'alert', color: 'var(--copper)' },
+  fail: { icon: 'x', color: 'var(--rose)' },
+}
+
+export function Checks({ validation, only }) {
   if (!validation) return null
   const byId = Object.fromEntries(validation.checks.map((c) => [c.id, c]))
   return (
@@ -74,9 +81,11 @@ export function Checks({ validation }) {
       {CHECKS.map(({ id, label }) => {
         const c = byId[id]
         if (!c) return null
+        const status = checkStatus(c)
+        if (only && !only.includes(status)) return null
         return (
-          <li key={id} className={c.passed ? 'pass' : 'fail'}>
-            <Icon name={c.passed ? 'check' : 'x'} className="mark" style={{ color: c.passed ? 'var(--sage)' : 'var(--rose)' }} />
+          <li key={id} className={status}>
+            <Icon name={CHECK_LOOK[status].icon} className="mark" style={{ color: CHECK_LOOK[status].color }} />
             <span className="label-t">{label}</span>
             <span className="detail">{c.detail}</span>
           </li>
@@ -88,8 +97,10 @@ export function Checks({ validation }) {
 
 export function checksSummary(validation) {
   if (!validation) return '—'
-  const passed = validation.checks.filter((c) => c.passed).length
-  return `${passed}/${validation.checks.length}`
+  const statuses = validation.checks.map(checkStatus)
+  const passed = statuses.filter((s) => s === 'pass').length
+  const warn = statuses.filter((s) => s === 'warn').length
+  return `${passed}/${statuses.length}${warn ? ` · ${warn} to check` : ''}`
 }
 
 export function Empty({ title, children }) {

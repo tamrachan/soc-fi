@@ -64,7 +64,7 @@ export default function ClaimDetail() {
           </Notice>
         )}
         {claim.status === 'rejected' && review && (
-          <Notice tone="rose" title="Rejected by the treasurer">
+          <Notice tone="rose" title="Denied by the treasurer">
             “{review.reason}”
           </Notice>
         )}

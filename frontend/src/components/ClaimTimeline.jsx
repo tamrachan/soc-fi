@@ -1,6 +1,6 @@
 import { fmtDateTime, fmtMoney } from '../lib/format.js'
 
-const DECISION = { approve: 'Approved', return: 'Returned for edits', reject: 'Rejected' }
+const DECISION = { approve: 'Approved', return: 'Edits requested', reject: 'Denied' }
 const RESOLUTION = { edit_existing: 'edit this claim', start_new: 'start a new claim' }
 const PAY = {
   awaiting_device: 'Sent to treasurer’s Ledger',

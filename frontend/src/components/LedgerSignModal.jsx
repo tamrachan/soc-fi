@@ -137,7 +137,7 @@ export default function LedgerSignModal({ payment, claim, onClose }) {
                     <div className="device-center">
                       <Icon name="check" size={36} style={{ color: '#3c7a54' }} />
                       <div className="ds-title">Transaction signed</div>
-                      <div className="ds-sub">Broadcasting from Countersign</div>
+                      <div className="ds-sub">Broadcasting from SocFi</div>
                     </div>
                   )}
                   {stage === 'rejected' && (

@@ -1,7 +1,7 @@
 {
-  "name": "Countersign — St Andrews society reimbursements",
-  "short_name": "Countersign",
-  "description": "Snap a receipt, get reimbursed. Only the treasurer's Ledger can release the money.",
+  "name": "SocFi — Society Finance, secured.",
+  "short_name": "SocFi",
+  "description": "Snap a receipt, get reimbursed. Only the Union treasurer's Ledger can release the money.",
   "start_url": "./#/",
   "scope": "./",
   "display": "standalone",
