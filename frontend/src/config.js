@@ -17,8 +17,9 @@ export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost
 // the rate on the payment record at approval time (see HANDOVER.md).
 export const FX_TO_USDC = { GBP: 1.27, EUR: 1.08, USD: 1 }
 
-// The Union's wallet: the only one that pays. This is the emulated Ledger's first address.
-export const UNION_TREASURY_WALLET = '0xDad77910DbDFdE764fC21FCD4E74D71bBACA6D8D'
+// The Union's wallet: the only one that pays. Shown as the payment's source; the real one is
+// whatever address the Ledger signs from (GET /api/treasurer/wallet on the backend).
+export const UNION_TREASURY_WALLET = import.meta.env.VITE_UNION_TREASURY_WALLET || '0xDad77910DbDFdE764fC21FCD4E74D71bBACA6D8D'
 
 export const NETWORKS = {
   'base-sepolia': { label: 'Base Sepolia', explorer: 'https://sepolia.basescan.org/tx/' },

@@ -1,4 +1,6 @@
-# Context: society expense handler (N3XT Hackathon @ OP3N 2026)
+# Backend: the agent and the Ledger (N3XT Hackathon @ OP3N 2026)
+
+This folder is the Express API that gives the SocFi frontend its two real parts: the LLM agent that judges claims, and the Ledger signing and payout. The project overview, the claim flow and the demo script are in the [root README](../README.md). This file covers the hackathon brief, how to run and configure the backend, its API, and what we learned.
 
 ## Hackathon
 
@@ -50,8 +52,8 @@ A university society expense handler. The students' union holds funds in a Ledge
 
 ## Team split
 
-- Frontend: React (teammates).
-- Backend and Ledger integration: this repo.
+- Frontend: React, in `../frontend`. It keeps all claim data in the browser (mock) and calls this backend for the agent's verdict and the Ledger signature when run with `VITE_DATA_SOURCE=hybrid`.
+- Backend and Ledger integration: this folder.
 
 ## Decisions
 
@@ -61,7 +63,9 @@ A university society expense handler. The students' union holds funds in a Ledge
 - **No physical Ledger:** we use the Speculos emulator (Nano S Plus). The app binary is bundled at `speculos/ethereum-nanosp.elf`: it is Ledger's Ethereum app v1.22.5, built from [LedgerHQ/app-ethereum](https://github.com/LedgerHQ/app-ethereum) for the Nano S Plus. `ETH_APP_ELF=/path/to/app.elf npm run speculos` uses a different build.
 - **The DMK runs in the backend** and talks to Speculos over HTTP. With a real device it would have to move to the treasurer's browser (WebHID); the backend would then only draft the unsigned transaction and broadcast the signed one.
 - **LLM:** OpenAI SDK, with base URL and model configurable, so any OpenAI-compatible provider works.
-- **Hard limits in code**, applied whatever the model says: per-claim cap (`MAX_CLAIM_GBP`), claimed amount may not exceed the receipt total.
+- **Hard limits in code**, applied whatever the model says: per-claim cap (`MAX_CLAIM_GBP`), claimed amount may not exceed the receipt total. The cap is applied again at signing, in USDC.
+- **Hybrid, not Firebase.** The frontend was designed for a Firebase backend of about 35 methods. We did not build it. The frontend keeps its mock data layer and only the agent and the Ledger are real.
+- **Our own seed for the emulator.** The treasury address comes from `SPECULOS_SEED` in `.env`, not from Speculos' public default seed.
 
 ## Current state
 
@@ -70,10 +74,29 @@ Layout: `src/config.ts` (env), `src/agent.ts` (audit), `src/ledger.ts` (DMK + Et
 ### Running it
 
 ```sh
-npm run speculos   # emulated Ledger (needs Docker); screen and buttons at http://127.0.0.1:5001
-cp .env.example .env   # add LLM_API_KEY
-npm run dev        # API on http://localhost:3000
+npm install
+cp .env.example .env   # then fill it in, see below
+npm run speculos       # emulated Ledger (needs Docker); screen and buttons at http://127.0.0.1:5001
+npm run dev            # API on http://localhost:3000
 ```
+
+`.env` (git-ignored):
+
+| Variable | What it does |
+| --- | --- |
+| `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` | The agent's model. Any OpenAI-compatible provider. Tested with Gemini (`gemini-3.1-flash-lite` through Google's OpenAI-compatible URL). Without a key the agent declines everything. |
+| `SPECULOS_SEED` | 24 words. The emulated Ledger's seed, which decides the treasury address. `npm run speculos` reads it. Unset means Speculos' public default seed. Testnet funds only. |
+| `BROADCAST` | `false` stops after signing, so no funds are needed; the returned hash is real but never reaches the chain. Default `true`. |
+| `MAX_CLAIM_GBP`, `USDC_PER_GBP` | Per-claim cap (default 100) and the fixed GBP to USDC rate (default 1.27). |
+| `SPECULOS_URL`, `RPC_URL`, `PORT` | Defaults: `http://127.0.0.1:5001`, `https://sepolia.base.org`, `3000`. |
+
+### The treasury wallet and funding it
+
+- The seed phrase is the wallet's master secret; the treasury address is the first Ethereum address derived from it (path `44'/60'/0'/0/0`). A physical Ledger keeps the seed inside the device. It is in `.env` only because the emulator has to be told which seed to hold. The backend never sees a private key: it hands the device a transaction and gets a signature back.
+- `curl localhost:3000/api/treasurer/wallet` shows the address and its ETH and USDC balances.
+- It needs Base Sepolia ETH for fees (about 0.0000007 ETH per payout) and test USDC to pay out. Both are free: USDC from faucet.circle.com (choose Base Sepolia), ETH from the Coinbase Developer Platform faucet (needs a free sign-in). Alchemy's faucet wants a mainnet balance.
+- Faucets give roughly 10 to 20 USDC a day, so keep real payouts small. A transfer larger than the balance is mined and reverts; `broadcast` reports that as an error.
+- Each developer's `.env` has its own seed, so each has a different treasury address unless the seed is shared.
 
 ### With the frontend
 
@@ -83,9 +106,11 @@ The React app stays on its mock data; two steps are real: the agent's verdict wh
 cd ../frontend && VITE_DATA_SOURCE=hybrid npm run dev
 ```
 
-In the "Viewing as" switcher, the Union treasurer (Robin Calder) is the only persona who can sign: Payments, open a claim, "Open Ledger prompt" sends the transfer to the emulated device. The modal mirrors its screen and buttons; signing or rejecting there decides the payment. The amount and recipient come from the browser's mock store, so the device screen is the only real check on them.
+Submitting a claim calls `POST /api/agent/audit`; if this backend is not running, the submit fails. In the "Viewing as" switcher, the Union treasurer (Robin Calder) is the only persona who can sign: Payments, open a claim, "Open Ledger prompt" sends the transfer to the emulated device. The modal mirrors its screen and buttons; signing or rejecting there decides the payment. The amount and recipient come from the browser's mock store, so the device screen is the only real check on them.
 
 ### API
+
+The frontend uses only the last four rows. The `/api/expenses` routes are this backend's own earlier claim store, which the frontend does not call; they still work and are handy for testing with curl.
 
 | Route | Who | What |
 | --- | --- | --- |
@@ -101,24 +126,29 @@ In the "Viewing as" switcher, the Union treasurer (Robin Calder) is the only per
 | `POST /api/payments/sign` | frontend (hybrid) | Body: `paymentId`, `recipientAddress`, `amountUsdc`. Drafts the transfer, waits for the device, broadcasts. Returns `{ txHash, broadcast }`. 403 if rejected on the device; a repeated request returns the first result instead of paying twice (kept in memory only). |
 | `GET /api/device/screenshot`, `POST /api/device/button/{left,right,both}` | frontend (hybrid) | The emulator's screen and buttons, shown in the signing modal. |
 
-Statuses: `agent_approved`, `agent_rejected`, `overridden`, `signing`, `signed`, `paid`, `treasurer_rejected`.
+Statuses of the backend's own claims (not the frontend's): `agent_approved`, `agent_rejected`, `overridden`, `signing`, `signed`, `paid`, `treasurer_rejected`.
 
 ### Verified
 
 - DMK connects to Speculos from Node and reads the treasury address.
-- `pay` end to end with `BROADCAST=false`: the device shows the USDC amount, recipient and network in clear; confirming returns a signed transaction, rejecting returns 403 and leaves the claim in the queue.
-- Submit, override and queue routes.
+- Signing: the device shows the USDC amount, recipient and network in clear; confirming returns a signed transaction, rejecting returns 403.
+- **A real payout** (2026-10-12): a claim submitted in the frontend, approved by the agent, signed on the emulated device and paid in USDC on Base Sepolia.
+- **The LLM agent**, with a Gemini key: it approves and declines with reasons, and uses the society context (it declined baking ingredients claimed as a "team dinner" for the Blockchain Society).
+- `POST /api/payments/sign`: sign, reject (403), a repeated request returning the first result, and the per-claim cap.
+- The backend reconnects on its own after the emulator is restarted.
+- The frontend's claim, appeal and payment logic, by script. Not every screen has been clicked through.
 
 ### Not verified yet
 
-- **The LLM audit path.** No API key was available, so only the no-key fallback ran (it rejects everything with a "receipt was not read" flag).
-- **Broadcasting.** The treasury address has no USDC and almost no ETH on Base Sepolia.
+- **Receipt images** sent to the agent. Only receipt text has been tried.
+- A payout larger than the wallet's USDC balance (expected: mined, reverted, reported as an error).
 
 ### Not built
 
 - Accounts / auth. Routes are open and members are identified by the email in the request body.
 - Treasurer email on override. `notifyTreasurer` in `src/index.ts` only logs.
 - Any use of the Ledger CLI / Key Ring (e.g. keeping the LLM key in it).
+- Persistence for `POST /api/payments/sign`. Its record of sent payments is in memory, so the double-pay guard resets when the backend restarts.
 
 ## Gotchas
 
@@ -126,7 +156,9 @@ Statuses: `agent_approved`, `agent_rejected`, `overridden`, `signing`, `signed`,
 - **Speculos needs `--pki-prod`.** Without it the device rejects Ledger's token metadata (`ProvidePkiCertificateCommandError 5720`), falls back to blind signing, and fails with `6a80 Invalid data` because blind signing is off.
 - **The Speculos transport is HTTP, not the APDU TCP port.** `speculosTransportFactory(url)` takes the REST API URL. Its device model defaults to Stax; we pass `DeviceModelId.NANO_SP`.
 - **The Ethereum signer is a separate package**, `@ledgerhq/device-signer-kit-ethereum`. There is no `LedgerDeviceManagementKit` class; it is `DeviceManagementKitBuilder`.
-- **The default Speculos seed is public.** Its first address (`0xDad77910DbDFdE764fC21FCD4E74D71bBACA6D8D`) already has other people's transactions on Base Sepolia. Testnet only. To use our own, run `SPECULOS_SEED="..." npm run speculos`.
+- **The default Speculos seed is public.** Its first address (`0xDad77910DbDFdE764fC21FCD4E74D71bBACA6D8D`) already has other people's transactions on Base Sepolia. Put your own 24 words in `.env` as `SPECULOS_SEED`; `npm run speculos` reads it. `GET /api/treasurer/wallet` then shows the address to fund. Testnet funds only.
+- **`npm run speculos` replaces the running emulator.** Changing the seed means restarting it; the backend reconnects by itself.
+- **A hash with `BROADCAST=false` will not resolve on the explorer.** It is the hash the transaction would have had.
 - Device buttons can be driven over HTTP: `POST /button/{left,right,both}` with `{"action":"press-and-release"}`; the current screen text is at `GET /events?currentscreenonly=true`.
 
 ## Developer-experience notes (for the submission write-up)

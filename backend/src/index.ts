@@ -250,7 +250,7 @@ app.post("/api/device/button/:button", async (req, res) => {
 
 app.use((error: Error, _req: Request, res: Response, _next: express.NextFunction) => {
   console.error(error);
-  res.status(500).json({ error: error.message });
+  res.status(500).json({ error: error?.message ?? String(error) });
 });
 
 app.listen(config.port, () =>

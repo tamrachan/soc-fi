@@ -5,7 +5,7 @@ Living document. The front-end updates it whenever the schema, statuses or API c
 
 | | |
 |---|---|
-| Last updated | 2026-10-10 — St Andrews data, partial-claim rule, mobile receipt capture (see Changelog) |
+| Last updated | 2026-10-12 — the agent decides, appeals, Union treasurer, hybrid backend (see Changelog). **Sections 2 to 6 below still describe the older flow in places; the changelog entry is authoritative where they differ.** |
 | Pilot | University of St Andrews · St Andrews Students' Association ("Your Union") · `@st-andrews.ac.uk` |
 | Front-end | `frontend/` — Vite + React (JS), HashRouter, deployed to GitHub Pages in mock mode |
 | Source of truth for enums | [`frontend/src/data/schema.js`](frontend/src/data/schema.js) |
@@ -314,6 +314,19 @@ The team confirmed this flow. The landing-page animation (`src/components/story/
 | Payment goes to the member's saved crypto address | Same | No change |
 
 ## Changelog
+
+- **2026-10-12 (backend integration, branch `backend-integration`):**
+  - **No Firebase.** A third data source, `VITE_DATA_SOURCE=hybrid` (`src/data/hybridApi.js`), spreads `mockApi` and replaces two methods with calls to `backend/` (`VITE_BACKEND_URL`, default `http://localhost:3000`): `submitClaim` (asks the LLM agent for a verdict first) and `confirmOnDevice` (real signature on the emulated Ledger, real USDC transfer). It also adds `api.device` (`label`, `screenshotUrl()`, `press(button)`). `isMock` is true for both mock and hybrid; the new `hasDevice` export is true only for hybrid.
+  - **The agent decides (most of §8 is now built).** `submitClaim` no longer sends a passing claim to `pending_review`. A claim that passes gets a payment at once and status `awaiting_ledger`; one that fails gets `validation_failed`. `submitClaim` accepts an optional `agentVerdict: { decision, reason, flags }`, stored as an eighth check, `agent_judgement` (added to `CHECKS`; only present in hybrid mode).
+  - **Appeals.** New method `appealClaim(id, reason)`: owner only, from `validation_failed` to `pending_review`, sets `claim.appeal = { reason, at, version }`. Refused when `not_flagged` failed. `pending_review` now means "appealed"; the society treasurer decides it with the existing `reviewClaim`. `listReviewClaims` returns only claims that have an appeal or a review.
+  - **Union treasurer.** New `user.unionRole: 'treasurer'` (seed user `usr_union`, Robin Calder) and `isUnionTreasurer(session)` in `domain/permissions.js`. `listPayments`, `confirmOnDevice`, `cancelOnDevice`, `retryPayment` and `reconcilePayment` are Union-treasurer only. `payments.initiate` is removed from the society treasurer role. The Union treasurer can open any claim that has a payment.
+  - **Payments.** `payment.approvedBy` is `'agent'` or the society treasurer's user id. `payment.sourceAddress` is the Union wallet (`UNION_TREASURY_WALLET`, from `VITE_UNION_TREASURY_WALLET`). `confirmOnDevice(paymentId, { demoOutcome, txHash, device })` accepts a real hash and device name.
+  - **Display labels only:** `validation_failed` shows as "Declined by agent", `pending_review` as "Appealed", `rejected` as "Appeal denied". Stored enum values are unchanged.
+  - **Audit actions added:** `claim.agent_approved`, `claim.agent_declined` (actor `agent`), `claim.appealed`.
+  - **Seed data:** claims that were `pending_review` in the seed are approved by the agent on load, so they start in the Union treasurer's queue. Mock storage key bumped to `socfi.db.v3`.
+  - **`useAction`'s `run`** now resolves to `{ ok, data, error }`.
+  - **`LedgerSignModal`** in hybrid mode has no "Hold to sign": it sends the transfer to the device on open and mirrors the device's screen and buttons. The device is a Nano S Plus, not a Flex.
+  - **Not done:** society setup still asks each society for a treasury wallet and a paired Ledger; no emails; committee-only claiming is undecided.
 
 - **2026-10-11 (d):**
   - **Email rule added to §8:** the Union treasurer is emailed on submit, with warnings included; nothing is sent at flag time.
