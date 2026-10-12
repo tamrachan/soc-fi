@@ -23,7 +23,7 @@ const METHODS = [
   // receipts & AI
   'listSampleReceipts', 'getReceipt', 'extractReceipt',
   // claims
-  'listMyClaims', 'listReviewClaims', 'getClaim', 'submitClaim', 'withdrawClaim', 'reviewClaim',
+  'listMyClaims', 'listReviewClaims', 'getClaim', 'submitClaim', 'withdrawClaim', 'appealClaim', 'reviewClaim',
   // payments
   'listPayments', 'retryPayment', 'cancelOnDevice', 'confirmOnDevice', 'reconcilePayment',
   // audit

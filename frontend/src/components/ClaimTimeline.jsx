@@ -1,9 +1,9 @@
 import { fmtDateTime, fmtMoney } from '../lib/format.js'
 
-const DECISION = { approve: 'Approved', return: 'Edits requested', reject: 'Denied' }
+const DECISION = { approve: 'Appeal upheld', return: 'Edits requested', reject: 'Appeal denied' }
 const RESOLUTION = { edit_existing: 'edit this claim', start_new: 'start a new claim' }
 const PAY = {
-  awaiting_device: 'Sent to treasurer’s Ledger',
+  awaiting_device: 'Sent to the Union treasurer’s Ledger',
   cancelled: 'Rejected on Ledger. Nothing signed',
   pending: 'Signed on Ledger and broadcast',
   confirmed: 'Confirmed on-chain',
@@ -16,9 +16,10 @@ export function claimEvents(claim, names = {}) {
     ev.push({
       at: v.submittedAt,
       title: v.version === 1 ? 'Submitted' : `Resubmitted as version ${v.version}`,
-      sub: `${fmtMoney(v.fields.amount, v.fields.currency)} · ${v.validation.passed ? 'all checks passed' : 'checks failed'}`,
+      sub: `${fmtMoney(v.fields.amount, v.fields.currency)} · ${v.validation.passed ? 'approved by the agent' : 'declined by the agent'}`,
     })
   }
+  if (claim.appeal) ev.push({ at: claim.appeal.at, title: 'Appealed to the society treasurer', sub: '', quote: claim.appeal.reason })
   for (const r of claim.reviews) {
     ev.push({
       at: r.at,

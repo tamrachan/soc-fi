@@ -4,5 +4,6 @@
   { "id": "usr_priya", "displayName": "Priya Raman", "email": "pr87@st-andrews.ac.uk", "emailVerified": true, "walletAddress": "0xFABB0ac9d68B0B445fB7357272Ff202C5651694a", "createdAt": "2026-09-13T16:45:00Z" },
   { "id": "usr_elena", "displayName": "Elena Marsh", "email": "em301@st-andrews.ac.uk", "emailVerified": true, "walletAddress": "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199", "createdAt": "2026-09-09T08:00:00Z" },
   { "id": "usr_sam", "displayName": "Sam Lindqvist", "email": "sl156@st-andrews.ac.uk", "emailVerified": true, "walletAddress": "0xdD2FD4581271e230360230F9337D5c0430Bf44C0", "createdAt": "2026-09-20T13:10:00Z" },
-  { "id": "usr_kit", "displayName": "Kit Adeyemi", "email": "ka93@st-andrews.ac.uk", "emailVerified": true, "walletAddress": "0xbDA5747bFD65F08deb54cb465eB87D40e51B197E", "createdAt": "2026-09-18T10:05:00Z" }
+  { "id": "usr_kit", "displayName": "Kit Adeyemi", "email": "ka93@st-andrews.ac.uk", "emailVerified": true, "walletAddress": "0xbDA5747bFD65F08deb54cb465eB87D40e51B197E", "createdAt": "2026-09-18T10:05:00Z" },
+  { "id": "usr_union", "displayName": "Robin Calder", "email": "rc19@st-andrews.ac.uk", "emailVerified": true, "walletAddress": null, "unionRole": "treasurer", "createdAt": "2026-09-01T09:00:00Z" }
 ]

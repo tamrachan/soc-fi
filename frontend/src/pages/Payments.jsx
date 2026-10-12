@@ -1,6 +1,7 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../data/api.js'
 import { useApi, useSession } from '../state/AppState.jsx'
+import { isUnionTreasurer } from '../domain/permissions.js'
 import { fmtDateTime, fmtMoney, shortAddr } from '../lib/format.js'
 import { NETWORKS } from '../config.js'
 import { Empty, Loading, PageHead, PaymentPill } from '../components/ui.jsx'
@@ -8,23 +9,22 @@ import { Empty, Loading, PageHead, PaymentPill } from '../components/ui.jsx'
 export default function Payments() {
   const session = useSession()
   const navigate = useNavigate()
-  const { data: payments } = useApi(() => api.listPayments(), [session.user.id])
+  const unionTreasurer = isUnionTreasurer(session)
+  const { data: payments } = useApi(() => (unionTreasurer ? api.listPayments() : Promise.resolve([])), [session.user.id])
+
+  if (!unionTreasurer) return <Empty title="Union treasurer only">Only the Union treasurer holds the Ledger and signs payments.</Empty>
 
   return (
     <>
       <PageHead
-        eyebrow="Treasurer"
+        eyebrow="Union treasurer"
         title="Payments."
-        lede="Every payment was approved for one exact claim version and signed on a Ledger. Claims are marked paid only after on-chain confirmation."
+        lede="Each payment here was already approved, by the agent or by a society treasurer on appeal. Your job is to check that the amount and recipient on the Ledger match the claim, then sign."
       />
       {!payments ? (
         <Loading />
       ) : payments.length === 0 ? (
-        <Empty title="No payments yet">
-          <Link to="/review" className="link">
-            Go to the review queue
-          </Link>
-        </Empty>
+        <Empty title="No payments yet">Approved claims appear here, ready to sign.</Empty>
       ) : (
         <div className="table-wrap">
           <table className="table responsive">

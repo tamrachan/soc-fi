@@ -1,12 +1,61 @@
+import { useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { api } from '../data/api.js'
-import { useApi, useSession } from '../state/AppState.jsx'
+import { useAction, useApi, useSession } from '../state/AppState.jsx'
 import { CATEGORIES, CLAIM_STATUS_META } from '../data/schema.js'
 import { fmtDate, fmtMoney, shortAddr } from '../lib/format.js'
 import { NETWORKS } from '../config.js'
 import Receipt from '../components/Receipt.jsx'
 import ClaimTimeline from '../components/ClaimTimeline.jsx'
-import { Checks, Empty, Loading, Notice, PageHead, StatusPill } from '../components/ui.jsx'
+import { Checks, Empty, ErrorText, Loading, Notice, PageHead, StatusPill } from '../components/ui.jsx'
+
+// The agent's decision stands unless the member appeals it to their society treasurer.
+function Appeal({ claim }) {
+  const [open, setOpen] = useState(false)
+  const [reason, setReason] = useState('')
+  const [appeal, { pending, error }] = useAction(() => api.appealClaim(claim.id, reason))
+  const tampered = claim.latest.validation.checks.some((c) => c.id === 'not_flagged' && !c.passed)
+
+  return (
+    <div className="card card-pad stack" style={{ '--stack': '12px', borderColor: 'rgba(214,143,134,0.35)' }}>
+      <span className="eyebrow" style={{ color: 'var(--rose)' }}>Declined by the agent</span>
+      <Checks validation={claim.latest.validation} only={['fail']} />
+      {open ? (
+        <form
+          className="stack"
+          style={{ '--stack': '10px' }}
+          onSubmit={(e) => {
+            e.preventDefault()
+            appeal()
+          }}
+        >
+          <label className="label" htmlFor="appeal-reason">Why did the agent get it wrong? Your society treasurer will read this.</label>
+          <textarea id="appeal-reason" className="textarea" value={reason} onChange={(e) => setReason(e.target.value)} />
+          <ErrorText error={error} />
+          <div className="row">
+            <button className="btn btn-primary btn-sm" disabled={pending || !reason.trim()}>
+              {pending ? 'Sending…' : 'Send appeal'}
+            </button>
+            <button type="button" className="btn btn-quiet btn-sm" onClick={() => setOpen(false)}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="row">
+          <Link to={`/claims/${claim.id}/edit`} className="btn btn-primary btn-sm">
+            Fix and resubmit
+          </Link>
+          {!tampered && (
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(true)}>
+              Appeal to your society treasurer
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function ClaimDetail() {
   const { id } = useParams()
@@ -34,9 +83,14 @@ export default function ClaimDetail() {
       </PageHead>
 
       <div className="stack" style={{ '--stack': '12px', marginBottom: 28 }}>
-        {state?.submitted && claim.status === 'pending_review' && (
-          <Notice tone="sage" title="Submitted. All seven checks passed.">
-            It's now in your treasurer's review queue. You'll see their decision here.
+        {state?.submitted && claim.status === 'awaiting_ledger' && (
+          <Notice tone="sage" title="Approved by the agent.">
+            No treasurer review needed. It's waiting for the Union treasurer to sign the payment on the Ledger.
+          </Notice>
+        )}
+        {claim.status === 'pending_review' && claim.appeal && (
+          <Notice tone="ice" title="Appeal sent to your society treasurer">
+            “{claim.appeal.reason}”
           </Notice>
         )}
         {mine && claim.status === 'returned' && review && (
@@ -58,13 +112,9 @@ export default function ClaimDetail() {
             “{review.reason}”
           </Notice>
         )}
-        {mine && claim.status === 'validation_failed' && (
-          <Notice tone="rose" title="Automated checks failed" action={<Link to={`/claims/${claim.id}/edit`} className="btn btn-primary btn-sm">Fix and resubmit</Link>}>
-            See which checks failed below.
-          </Notice>
-        )}
+        {mine && claim.status === 'validation_failed' && <Appeal claim={claim} />}
         {claim.status === 'rejected' && review && (
-          <Notice tone="rose" title="Denied by the treasurer">
+          <Notice tone="rose" title="Appeal denied by your society treasurer">
             “{review.reason}”
           </Notice>
         )}

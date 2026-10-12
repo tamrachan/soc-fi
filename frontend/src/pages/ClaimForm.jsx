@@ -300,7 +300,7 @@ export default function ClaimForm() {
     const mine = k === 'amount' ? Number(fields.amount) : fields[k]
     if (mine === ai) return null
     const shown = k === 'amount' ? fmtMoney(ai, extraction.currency ?? fields.currency) : k === 'category' ? CATEGORIES[ai] : ai
-    if (k === 'amount' && mine > ai) return `AI read ${shown}. If the AI misread it, keep your amount and your treasurer will check it against the receipt.`
+    if (k === 'amount' && mine > ai) return `AI read ${shown}. If the AI misread it, keep your amount and it will be checked against the receipt.`
     return `AI read: ${shown}`
   }
 
@@ -319,7 +319,7 @@ export default function ClaimForm() {
       supersedesClaimId: fromId ?? undefined,
     })
     if (!res.ok) return
-    if (res.data.status === 'pending_review') {
+    if (res.data.status !== 'validation_failed') {
       navigate(`/claims/${res.data.id}`, { state: { submitted: true } })
     } else {
       setFailed(res.data)
@@ -366,16 +366,21 @@ export default function ClaimForm() {
         {failed && (
           <div className="card card-pad stack" style={{ '--stack': '10px', borderColor: 'rgba(214,143,134,0.35)' }}>
             <span className="eyebrow" style={{ color: 'var(--rose)' }}>
-              {agentRejected ? 'Rejected by the receipt agent' : 'Automated checks didn’t pass'}
+              {agentRejected ? 'Rejected by the receipt agent' : 'Declined by the agent'}
             </span>
             {agentRejected && <h2>This receipt can’t be claimed.</h2>}
             <p className="muted" style={{ fontSize: 14 }}>
               {agentRejected
-                ? 'The receipt shows signs of tampering or hidden instructions. Nothing was sent to your treasurer, and the attempt is on the audit log.'
-                : 'Fix the fields below and resubmit, or withdraw the claim if it can’t be fixed.'}
+                ? 'The receipt shows signs of tampering or hidden instructions. Nothing was sent for payment, and the attempt is on the audit log.'
+                : 'Fix the fields below and resubmit. If you think the agent got it wrong, appeal to your society treasurer.'}
             </p>
             <Checks validation={failed.latest.validation} only={['fail']} />
-            <div>
+            <div className="row">
+              {!agentRejected && (
+                <Link to={`/claims/${failed.id}`} className="btn btn-ghost btn-sm">
+                  Appeal this decision
+                </Link>
+              )}
               <button
                 type="button"
                 className="btn btn-danger btn-sm"

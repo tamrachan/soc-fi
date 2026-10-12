@@ -52,7 +52,7 @@ export function useAction(fn) {
       return { ok: true, data }
     } catch (error) {
       setState({ pending: false, error })
-      return { ok: false, data: undefined }
+      return { ok: false, data: undefined, error }
     }
   }, [])
   const clear = useCallback(() => setState({ pending: false, error: null }), [])

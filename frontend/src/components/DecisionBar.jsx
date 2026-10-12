@@ -19,29 +19,29 @@ const QUICK_REASONS = {
 }
 
 const OPTIONS = [
-  { id: 'approve', key: 'A', icon: 'check', label: 'Approve', tone: 'sage' },
+  { id: 'approve', key: 'A', icon: 'check', label: 'Uphold appeal', tone: 'sage' },
   { id: 'return', key: 'E', icon: 'arrow', label: 'Request edits', tone: 'copper' },
-  { id: 'reject', key: 'D', icon: 'x', label: 'Deny', tone: 'rose' },
+  { id: 'reject', key: 'D', icon: 'x', label: 'Deny appeal', tone: 'rose' },
 ]
 
-/** What the treasurer should look at before deciding: warnings from the checks, or an all-clear. */
+/** What the treasurer should look at before deciding: why the agent declined, and any warnings. */
 function Attention({ claim }) {
-  const warns = claim.latest.validation.checks.filter((c) => checkStatus(c) === 'warn')
+  const warns = claim.latest.validation.checks.filter((c) => checkStatus(c) !== 'pass')
   const label = (id) => CHECKS.find((c) => c.id === id)?.label
   if (!warns.length)
     return (
       <p className="row" style={{ gap: 8, fontSize: 14, color: 'var(--silver)' }}>
-        <Icon name="check" style={{ color: 'var(--sage)' }} /> All 7 checks passed and the AI’s read matches what {claim.claimant.displayName.split(' ')[0]} claimed.
+        <Icon name="check" style={{ color: 'var(--sage)' }} /> Every check passed and the AI’s read matches what {claim.claimant.displayName.split(' ')[0]} claimed.
       </p>
     )
   return (
     <div className="stack" style={{ '--stack': '6px' }}>
       <span className="eyebrow">
-        {warns.length} thing{warns.length > 1 ? 's' : ''} to check on the receipt
+        Why the agent declined, and what to check
       </span>
       {warns.map((c) => (
         <p key={c.id} className="row" style={{ gap: 8, fontSize: 14, alignItems: 'flex-start', flexWrap: 'nowrap' }}>
-          <Icon name="alert" style={{ color: 'var(--copper)', flex: 'none', marginTop: 2 }} />
+          <Icon name="alert" style={{ color: checkStatus(c) === 'fail' ? 'var(--rose)' : 'var(--copper)', flex: 'none', marginTop: 2 }} />
           <span>
             <span style={{ color: 'var(--white)' }}>{label(c.id)}.</span> <span className="muted">{c.detail}</span>
           </span>
@@ -174,9 +174,9 @@ export default function DecisionBar({ claim, onApproved, onDecided }) {
 
               <ErrorText error={error} />
               <button className={`btn ${choice === 'reject' ? 'btn-danger' : 'btn-primary'} btn-block`} disabled={pending || (choice !== 'approve' && !reason.trim())}>
-                {pending ? 'Saving…' : choice === 'approve' ? 'Approve and sign on Ledger' : choice === 'return' ? `Send back to ${first}` : 'Deny claim'}
+                {pending ? 'Saving…' : choice === 'approve' ? 'Uphold and send to the Union treasurer' : choice === 'return' ? `Send back to ${first}` : 'Deny claim'}
               </button>
-              {choice === 'approve' && <p className="hint" style={{ textAlign: 'center' }}>Nothing is paid until you sign on the device.</p>}
+              {choice === 'approve' && <p className="hint" style={{ textAlign: 'center' }}>Nothing is paid until the Union treasurer signs on the Ledger.</p>}
             </form>
           )}
         </div>

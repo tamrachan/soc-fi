@@ -3,7 +3,10 @@
 import { DATA_SOURCE } from '../config.js'
 import { mockApi } from './mockApi.js'
 import { firebaseApi } from './firebaseApi.js'
+import { hybridApi } from './hybridApi.js'
 
-export const api = DATA_SOURCE === 'firebase' ? firebaseApi : mockApi
-export const isMock = api === mockApi
+export const api = DATA_SOURCE === 'firebase' ? firebaseApi : DATA_SOURCE === 'hybrid' ? hybridApi : mockApi
+export const isMock = api !== firebaseApi
+// True when payments are signed on a Ledger (emulated) rather than simulated in the page.
+export const hasDevice = api === hybridApi
 export { ApiError } from './errors.js'

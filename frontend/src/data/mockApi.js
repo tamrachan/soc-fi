@@ -14,15 +14,21 @@ import { runChecks } from '../domain/rules.js'
 import { readReceipt } from '../domain/reader/index.js'
 import { matchCommitteeRecord } from '../domain/committeeMatch.js'
 import { round2, toUsdc, isEvmAddress } from '../lib/format.js'
-import { FX_TO_USDC, UNI_EMAIL_SUFFIX } from '../config.js'
+import { FX_TO_USDC, UNI_EMAIL_SUFFIX, UNION_TREASURY_WALLET } from '../config.js'
 
 // Bump the version whenever the seed data changes, so browsers drop their old copy.
-const DB_KEY = 'socfi.db.v2'
+const DB_KEY = 'socfi.db.v3'
 const SESSION_KEY = 'socfi.session.v1'
 const DEFAULT_USER = 'usr_amara'
 const DEMO_CODE = '482913'
 
-const seed = () =>
+const seed = () => {
+  const data = seedData()
+  // Society treasurers no longer pay; that is the Union treasurer's job alone.
+  for (const m of data.memberships) m.permissions = m.permissions.filter((p) => p !== 'payments.initiate')
+  return data
+}
+const seedData = () =>
   structuredClone({
     societies: societiesSeed,
     committeeRecords: committeeSeed,
@@ -94,6 +100,11 @@ function requirePerm(societyId, perm) {
     throw new ApiError('permission-denied', 'Your role does not allow this action.')
   return u
 }
+function requireUnionTreasurer() {
+  const u = requireVerified()
+  if (u.unionRole !== 'treasurer') throw new ApiError('permission-denied', 'Only the Union treasurer can sign payments.')
+  return u
+}
 const society = (id) => {
   const s = db.societies.find((x) => x.id === id)
   if (!s) throw new ApiError('not-found', 'Society not found.')
@@ -134,6 +145,48 @@ function claimView(c) {
 function setStatus(claim, status) {
   claim.status = status
   claim.updatedAt = now()
+}
+
+// Drafts the payment from the trusted claim record and the member's saved wallet only.
+// approvedBy is 'agent', or the society treasurer who upheld an appeal.
+function createPayment(c, version, approvedBy, at) {
+  const s = society(c.societyId)
+  const claimant = db.users.find((x) => x.id === c.claimantId)
+  const f = c.versions.find((v) => v.version === version).fields
+  const payment = {
+    id: uid('pay'),
+    claimId: c.id,
+    claimReference: c.reference,
+    claimVersion: version,
+    societyId: c.societyId,
+    recipientUserId: claimant.id,
+    recipientAddress: claimant.walletAddress,
+    sourceAddress: UNION_TREASURY_WALLET,
+    fiatAmount: f.amount,
+    fiatCurrency: f.currency,
+    fxRate: FX_TO_USDC[f.currency] ?? 1,
+    amount: toUsdc(f.amount, f.currency),
+    token: s.reimbursement.token,
+    network: s.reimbursement.network,
+    status: 'awaiting_device',
+    attempts: 0,
+    txHash: null,
+    approvedBy,
+    approvedAt: at,
+    deviceConfirmedAt: null,
+    confirmedAt: null,
+    history: [{ status: 'awaiting_device', at }],
+  }
+  db.payments.push(payment)
+  c.paymentId = payment.id
+  c.approvedVersion = version
+  setStatus(c, 'awaiting_ledger')
+}
+
+function approvePendingSeedClaims() {
+  const pending = db.claims.filter((c) => c.status === 'pending_review' && !c.appeal && !c.reviews.length)
+  for (const c of pending) createPayment(c, c.currentVersion, 'agent', c.versions.at(-1).submittedAt)
+  if (pending.length) commit()
 }
 
 // ---------- API ----------
@@ -430,8 +483,9 @@ export const mockApi = {
     const ids = db.memberships
       .filter((m) => m.userId === u.id && m.status === 'active' && m.permissions.includes('claims.review'))
       .map((m) => m.societyId)
+    // Society treasurers only see claims that were appealed to them.
     return db.claims
-      .filter((c) => ids.includes(c.societyId))
+      .filter((c) => ids.includes(c.societyId) && (c.appeal || c.reviews.length))
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
       .map(claimView)
   },
@@ -440,7 +494,10 @@ export const mockApi = {
     const u = requireVerified()
     const c = claimById(id)
     const m = membership(u.id, c.societyId)
-    const canSee = c.claimantId === u.id || (m?.status === 'active' && m.permissions.includes('claims.view_society'))
+    const canSee =
+      c.claimantId === u.id ||
+      (m?.status === 'active' && m.permissions.includes('claims.view_society')) ||
+      (u.unionRole === 'treasurer' && !!c.paymentId)
     if (!canSee) throw new ApiError('permission-denied', 'You cannot view this claim.')
     return claimView(c)
   },
@@ -448,8 +505,11 @@ export const mockApi = {
   /**
    * Create a claim, or a new version of one. The member has confirmed every field.
    * Server re-reads the receipt if no extraction is supplied, then runs the 7 checks.
+   * The agent decides alone: a claim that passes goes straight to the Union treasurer's Ledger,
+   * with no society treasurer in between. agentVerdict is the backend agent's own judgement
+   * (set by hybridApi); without it the checks are the whole decision.
    */
-  async submitClaim({ claimId, societyId, fields, receipt, entryMode, aiExtraction, supersedesClaimId }) {
+  async submitClaim({ claimId, societyId, fields, receipt, entryMode, aiExtraction, supersedesClaimId, agentVerdict }) {
     const u = requirePerm(societyId, 'claims.create')
     if (!u.walletAddress) throw new ApiError('failed-precondition', 'Add a payout wallet to your account before claiming.')
     const s = society(societyId)
@@ -486,6 +546,12 @@ export const mockApi = {
       claimId: claim?.id,
       supersedesClaimId,
     })
+    if (agentVerdict) {
+      const ok = agentVerdict.decision === 'approve'
+      validation.checks.push({ id: 'agent_judgement', status: ok ? 'pass' : 'fail', passed: ok, detail: agentVerdict.reason })
+      validation.passed = validation.checks.every((c) => c.passed)
+      validation.agentFlags = agentVerdict.flags ?? []
+    }
     const ts = now()
 
     if (!claim) {
@@ -526,15 +592,35 @@ export const mockApi = {
       claim.versions.push(version)
     }
     claim.currentVersion = version.version
-    setStatus(claim, validation.passed ? 'pending_review' : 'validation_failed')
+    claim.appeal = null
+    if (validation.passed) createPayment(claim, version.version, 'agent', ts)
+    else setStatus(claim, 'validation_failed')
 
     if (validation.passed && supersedesClaimId) {
       const old = db.claims.find((c) => c.id === supersedesClaimId && c.claimantId === u.id)
       if (old && old.status === 'returned') setStatus(old, 'superseded')
     }
     audit('claim.submitted', { type: 'claim', id: claim.id }, societyId, { version: version.version, checksPassed: validation.passed })
+    audit(validation.passed ? 'claim.agent_approved' : 'claim.agent_declined', { type: 'claim', id: claim.id }, societyId, { version: version.version }, 'agent')
     commit()
     return claimView(claim)
+  },
+
+  // The member disagrees with the agent: the claim goes to their society treasurer, the only
+  // point where a society treasurer is involved.
+  async appealClaim(id, reason) {
+    const u = requireVerified()
+    const c = claimById(id)
+    if (c.claimantId !== u.id) throw new ApiError('permission-denied', 'Not your claim.')
+    if (c.status !== 'validation_failed') throw new ApiError('failed-precondition', 'Only a claim the agent declined can be appealed.')
+    if (c.versions.at(-1).validation.checks.some((x) => x.id === 'not_flagged' && !x.passed))
+      throw new ApiError('failed-precondition', 'A receipt flagged for tampering cannot be appealed.')
+    if (!reason?.trim()) throw new ApiError('invalid-argument', 'Say why the agent got it wrong.')
+    c.appeal = { reason: reason.trim(), at: now(), version: c.currentVersion }
+    setStatus(c, 'pending_review')
+    audit('claim.appealed', { type: 'claim', id }, c.societyId, { version: c.currentVersion })
+    commit()
+    return claimView(c)
   },
 
   async withdrawClaim(id) {
@@ -549,14 +635,15 @@ export const mockApi = {
   },
 
   /**
-   * decision: 'approve' | 'return' | 'reject'. `version` binds the decision to what the treasurer saw.
-   * Approval creates a payment from the trusted claim record and member's saved wallet only.
+   * A society treasurer decides an appeal. decision: 'approve' | 'return' | 'reject'. `version`
+   * binds the decision to what they saw. Approving overrules the agent and drafts the payment
+   * for the Union treasurer's Ledger; the society treasurer cannot sign it.
    */
   async reviewClaim(id, { decision, reason = '', resolution = null, version }) {
     const c = claimById(id)
     const u = requirePerm(c.societyId, 'claims.review')
     if (c.claimantId === u.id) throw new ApiError('permission-denied', 'You cannot review your own claim.')
-    if (c.status !== 'pending_review') throw new ApiError('failed-precondition', 'This claim is not waiting for review.')
+    if (c.status !== 'pending_review') throw new ApiError('failed-precondition', 'This claim has no appeal waiting.')
     if (version !== c.currentVersion) throw new ApiError('aborted', 'The claim changed while you were reviewing. Reload and check again.')
     if (decision !== 'approve' && !reason.trim()) throw new ApiError('invalid-argument', 'Give the member a reason.')
     if (decision === 'return' && !['edit_existing', 'start_new'].includes(resolution))
@@ -571,36 +658,7 @@ export const mockApi = {
     c.reviews.push(review)
 
     if (decision === 'approve') {
-      const s = society(c.societyId)
-      const f = c.versions.find((v) => v.version === version).fields
-      const payment = {
-        id: uid('pay'),
-        claimId: c.id,
-        claimReference: c.reference,
-        claimVersion: version,
-        societyId: c.societyId,
-        recipientUserId: claimant.id,
-        recipientAddress: claimant.walletAddress,
-        sourceAddress: s.reimbursement.treasuryWallet,
-        fiatAmount: f.amount,
-        fiatCurrency: f.currency,
-        fxRate: FX_TO_USDC[f.currency] ?? 1,
-        amount: toUsdc(f.amount, f.currency),
-        token: s.reimbursement.token,
-        network: s.reimbursement.network,
-        status: 'awaiting_device',
-        attempts: 0,
-        txHash: null,
-        approvedBy: u.id,
-        approvedAt: review.at,
-        deviceConfirmedAt: null,
-        confirmedAt: null,
-        history: [{ status: 'awaiting_device', at: review.at }],
-      }
-      db.payments.push(payment)
-      c.paymentId = payment.id
-      c.approvedVersion = version
-      setStatus(c, 'awaiting_ledger')
+      createPayment(c, version, u.id, review.at)
     } else {
       setStatus(c, decision === 'return' ? 'returned' : 'rejected')
     }
@@ -614,19 +672,16 @@ export const mockApi = {
 
   // ----- payments (Ledger) -----
   async listPayments() {
-    const u = requireVerified()
-    const ids = db.memberships
-      .filter((m) => m.userId === u.id && m.status === 'active' && m.permissions.includes('payments.initiate'))
-      .map((m) => m.societyId)
+    requireUnionTreasurer()
     return db.payments
-      .filter((p) => ids.includes(p.societyId))
+      .slice()
       .sort((a, b) => b.approvedAt.localeCompare(a.approvedAt))
       .map((p) => ({ ...out(p), society: societyCard(p.societyId), recipient: userCard(p.recipientUserId) }))
   },
 
   async retryPayment(paymentId) {
     const p = paymentById(paymentId)
-    requirePerm(p.societyId, 'payments.initiate')
+    requireUnionTreasurer()
     const c = claimById(p.claimId)
     if (p.status !== 'cancelled' || c.status !== 'approved') throw new ApiError('failed-precondition', 'Nothing to retry.')
     p.status = 'awaiting_device'
@@ -638,7 +693,7 @@ export const mockApi = {
   // Treasurer rejected (or the prompt timed out) on the device. Nothing was signed or broadcast.
   async cancelOnDevice(paymentId) {
     const p = paymentById(paymentId)
-    requirePerm(p.societyId, 'payments.initiate')
+    requireUnionTreasurer()
     const c = claimById(p.claimId)
     p.status = 'cancelled'
     p.attempts += 1
@@ -652,10 +707,11 @@ export const mockApi = {
    * Device signed. In production the backend gets the signature via wallet-cli / Agent Intent and
    * broadcasts; it never marks paid until on-chain confirmation.
    * demoOutcome: 'confirm' | 'uncertain' simulates the chain result.
+   * txHash / device: set by hybridApi when a real device signed and the backend broadcast.
    */
-  async confirmOnDevice(paymentId, { demoOutcome = 'confirm' } = {}) {
+  async confirmOnDevice(paymentId, { demoOutcome = 'confirm', txHash, device = 'Ledger Flex' } = {}) {
     const p = paymentById(paymentId)
-    requirePerm(p.societyId, 'payments.initiate')
+    requireUnionTreasurer()
     const c = claimById(p.claimId)
     if (p.status !== 'awaiting_device') throw new ApiError('failed-precondition', 'This payment is not waiting for the device.')
     if (c.approvedVersion !== p.claimVersion || c.currentVersion !== p.claimVersion)
@@ -664,10 +720,10 @@ export const mockApi = {
     p.status = 'pending'
     p.attempts += 1
     p.deviceConfirmedAt = ts
-    p.txHash = '0x' + Array.from({ length: 64 }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('')
+    p.txHash = txHash ?? '0x' + Array.from({ length: 64 }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('')
     p.history.push({ status: 'pending', at: ts })
     setStatus(c, 'payment_pending')
-    audit('payment.device_confirmed', { type: 'payment', id: p.id }, p.societyId, { device: 'Ledger Flex' })
+    audit('payment.device_confirmed', { type: 'payment', id: p.id }, p.societyId, { device })
     commit()
 
     setTimeout(() => {
@@ -688,7 +744,7 @@ export const mockApi = {
   // Look the tx up on-chain before any retry, so a member is never paid twice.
   async reconcilePayment(paymentId) {
     const p = paymentById(paymentId)
-    requirePerm(p.societyId, 'payments.initiate')
+    requireUnionTreasurer()
     if (p.status !== 'needs_reconciliation') throw new ApiError('failed-precondition', 'Nothing to reconcile.')
     await wait(1400)
     const c = claimById(p.claimId)
@@ -705,11 +761,11 @@ export const mockApi = {
       .filter((m) => m.userId === u.id && m.status === 'active' && m.permissions.includes('claims.view_society'))
       .map((m) => m.societyId)
     return db.auditLog
-      .filter((a) => a.actorId === u.id || ids.includes(a.societyId))
+      .filter((a) => u.unionRole === 'treasurer' || a.actorId === u.id || ids.includes(a.societyId))
       .slice(0, 200)
       .map((a) => ({
         ...out(a),
-        actorName: a.actorId === 'system' ? 'System' : a.actorId === 'union_finance' ? 'Union finance' : userCard(a.actorId)?.displayName ?? a.actorId,
+        actorName: a.actorId === 'agent' ? 'Agent' : a.actorId === 'system' ? 'System' : a.actorId === 'union_finance' ? 'Union finance' : userCard(a.actorId)?.displayName ?? a.actorId,
         societyName: a.societyId ? societyCard(a.societyId)?.name : null,
       }))
   },
@@ -718,10 +774,11 @@ export const mockApi = {
   demo: {
     personas: [
       { id: 'usr_amara', label: 'Amara Okafor', hint: 'Member · Blockchain, Baking' },
-      { id: 'usr_jonah', label: 'Jonah Whitfield', hint: 'Treasurer · Blockchain Society' },
-      { id: 'usr_elena', label: 'Elena Marsh', hint: 'Treasurer · The Baking Society' },
+      { id: 'usr_union', label: 'Robin Calder', hint: 'Union treasurer · holds the Ledger, signs payments' },
+      { id: 'usr_jonah', label: 'Jonah Whitfield', hint: 'Society treasurer (appeals) · Blockchain Society' },
+      { id: 'usr_elena', label: 'Elena Marsh', hint: 'Society treasurer (appeals) · The Baking Society' },
       { id: 'usr_priya', label: 'Priya Raman', hint: 'Logistics · Blockchain Society' },
-      { id: 'usr_sam', label: 'Sam Lindqvist', hint: 'Treasurer · FinTech (setup pending)' },
+      { id: 'usr_sam', label: 'Sam Lindqvist', hint: 'Society treasurer · FinTech (setup pending)' },
     ],
     switchUser(id) {
       sessionUserId = id
@@ -729,12 +786,16 @@ export const mockApi = {
     },
     reset() {
       db = seed()
+      approvePendingSeedClaims()
       sessionUserId = DEFAULT_USER
       commit()
     },
     code: DEMO_CODE,
   },
 }
+
+// Seed claims that passed every check are approved by the agent, so they wait for the Union's Ledger.
+approvePendingSeedClaims()
 
 // A reload can interrupt the simulated confirmation timer; treat those payments as confirmed.
 for (const p of db.payments.filter((x) => x.status === 'pending')) {

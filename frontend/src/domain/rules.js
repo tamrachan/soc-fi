@@ -70,7 +70,8 @@ export function runChecks({ fields, extraction, society, claims, claimId, supers
   else if (soft.length) results.not_flagged = ['warn', soft.map((f) => f.message).join(' ')]
   else results.not_flagged = ['pass', 'Nothing suspicious found on the receipt']
 
-  const checks = CHECKS.map(({ id }) => ({ id, status: results[id][0], passed: results[id][0] !== 'fail', detail: results[id][1] }))
+  // agent_judgement is not a rule: the data layer adds it when the backend agent is connected.
+  const checks = CHECKS.filter(({ id }) => results[id]).map(({ id }) => ({ id, status: results[id][0], passed: results[id][0] !== 'fail', detail: results[id][1] }))
   return {
     passed: checks.every((c) => c.passed),
     warnings: checks.filter((c) => c.status === 'warn').length,

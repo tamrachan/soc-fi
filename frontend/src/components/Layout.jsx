@@ -1,7 +1,7 @@
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { api, isMock } from '../data/api.js'
 import { useApi, useSession } from '../state/AppState.jsx'
-import { claimableSocieties, isReviewer, societiesWithPerm } from '../domain/permissions.js'
+import { claimableSocieties, isReviewer, isUnionTreasurer, societiesWithPerm } from '../domain/permissions.js'
 import { initials } from '../lib/format.js'
 import { readerLabel } from '../lib/readerSettings.js'
 import { APP_NAME, TAGLINE, UNION_NAME } from '../config.js'
@@ -80,7 +80,7 @@ function TabBar({ reviewer, pending, canClaim }) {
       {reviewer ? (
         <Link to="/review" className={on(pathname.startsWith('/review') || pathname.startsWith('/payments'))}>
           <Icon name="inbox" size={20} />
-          Review
+          Appeals
           {pending > 0 && <span className="badge">{pending}</span>}
         </Link>
       ) : (
@@ -104,7 +104,7 @@ export default function Layout() {
   const reviewer = isReviewer(session)
   const { data: queue } = useApi(() => (reviewer ? api.listReviewClaims() : Promise.resolve([])), [reviewer, user?.id])
   const pending = (queue ?? []).filter((c) => c.status === 'pending_review').length
-  const canPay = societiesWithPerm(session, 'payments.initiate').length > 0
+  const canPay = isUnionTreasurer(session)
   const canConfigure = societiesWithPerm(session, 'society.configure_reimbursement').length > 0
 
   if (session === undefined) return <Loading />
@@ -132,7 +132,7 @@ export default function Layout() {
               <NavLink to="/societies">Societies</NavLink>
               {reviewer && (
                 <NavLink to="/review">
-                  Review{pending > 0 && <span className="count">{pending}</span>}
+                  Appeals{pending > 0 && <span className="count">{pending}</span>}
                 </NavLink>
               )}
               {canPay && <NavLink to="/payments">Payments</NavLink>}

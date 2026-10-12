@@ -8,6 +8,9 @@ export const societiesWithPerm = (session, perm) =>
     .filter((m) => m.permissions.includes(perm))
     .map((m) => m.society)
 
+// The one person who holds the Union's Ledger and signs payments.
+export const isUnionTreasurer = (session) => session?.user?.unionRole === 'treasurer'
+
 export const isReviewer = (session) => societiesWithPerm(session, 'claims.review').length > 0
 
 export const claimableSocieties = (session) =>

@@ -1,8 +1,8 @@
 // Shared enums. Keep in sync with HANDOVER.md — the backend uses the same string values.
 
 export const CLAIM_STATUS = {
-  VALIDATION_FAILED: 'validation_failed', // automated checks failed; member can fix and resubmit
-  PENDING_REVIEW: 'pending_review',
+  VALIDATION_FAILED: 'validation_failed', // the agent declined it; member can fix and resubmit, or appeal
+  PENDING_REVIEW: 'pending_review', // appealed; the society treasurer decides
   RETURNED: 'returned', // treasurer asked for edits; see latest review.resolution
   REJECTED: 'rejected',
   APPROVED: 'approved', // approved, no live device prompt (e.g. treasurer cancelled on device)
@@ -15,12 +15,12 @@ export const CLAIM_STATUS = {
 }
 
 export const CLAIM_STATUS_META = {
-  validation_failed: { label: 'Needs fixing', tone: 'rose', member: 'Some automated checks failed. Fix the fields and resubmit.' },
-  pending_review: { label: 'In review', tone: 'ice', member: 'Waiting for your treasurer to review.' },
+  validation_failed: { label: 'Declined by agent', tone: 'rose', member: 'The agent declined this claim. Fix it and resubmit, or appeal to your society treasurer.' },
+  pending_review: { label: 'Appealed', tone: 'ice', member: 'Your appeal is with your society treasurer.' },
   returned: { label: 'Edits requested', tone: 'copper', member: 'Your treasurer asked for changes.' },
-  rejected: { label: 'Denied', tone: 'rose', member: 'This claim will not be paid.' },
-  approved: { label: 'Approved', tone: 'copper', member: 'Approved — waiting for the treasurer to sign on their Ledger.' },
-  awaiting_ledger: { label: 'Awaiting Ledger', tone: 'copper', member: 'Approved — waiting for the treasurer to sign on their Ledger.' },
+  rejected: { label: 'Appeal denied', tone: 'rose', member: 'This claim will not be paid.' },
+  approved: { label: 'Approved', tone: 'copper', member: 'Approved — waiting for the Union treasurer to sign on the Ledger.' },
+  awaiting_ledger: { label: 'Awaiting Ledger', tone: 'copper', member: 'Approved — waiting for the Union treasurer to sign on the Ledger.' },
   payment_pending: { label: 'Payment pending', tone: 'ice', member: 'Payment sent, waiting for network confirmation.' },
   paid: { label: 'Paid', tone: 'sage', member: 'Paid to your saved wallet.' },
   needs_reconciliation: { label: 'Reconciling', tone: 'rose', member: 'Payment outcome is being checked before any retry.' },
@@ -69,7 +69,8 @@ export const PERMISSIONS = {
   MEMBERS_MANAGE: 'members.manage',
 }
 
-// Least privilege: logistics can see society claims but cannot approve or pay.
+// Least privilege: logistics can see society claims but cannot decide appeals. Nobody in a society
+// can pay: only the Union treasurer (user.unionRole) signs payments on the Ledger.
 export const ROLE_PERMISSIONS = {
   member: ['claims.create'],
   logistics_coordinator: ['claims.create', 'claims.view_society'],
@@ -78,7 +79,6 @@ export const ROLE_PERMISSIONS = {
     'claims.view_society',
     'claims.review',
     'claims.approve',
-    'payments.initiate',
     'society.configure_reimbursement',
     'members.manage',
   ],
@@ -95,7 +95,7 @@ export const CATEGORIES = {
 
 export const CURRENCIES = ['GBP', 'EUR', 'USD']
 
-// The seven deterministic checks run by plain code after the AI read (CONTEXT.md step 3).
+// Seven deterministic checks run by plain code after the AI read (CONTEXT.md step 3), then the agent's own judgement.
 export const CHECKS = [
   { id: 'amount_matches', label: 'Claimed amount is covered by the receipt' },
   { id: 'not_duplicate', label: 'Not a duplicate of another claim' },
@@ -104,6 +104,8 @@ export const CHECKS = [
   { id: 'recent_date', label: 'Receipt is recent' },
   { id: 'under_limit', label: 'Under the per-claim limit' },
   { id: 'not_flagged', label: 'No signs of fraud or hidden instructions' },
+  // Only present when the backend agent is connected (VITE_DATA_SOURCE=hybrid).
+  { id: 'agent_judgement', label: 'Agent: a reasonable expense for this society' },
 ]
 
 export const REIMBURSEMENT_STATUS = {

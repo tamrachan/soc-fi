@@ -7,8 +7,8 @@ import { fmtMoney, relTime } from '../lib/format.js'
 import { checksSummary, Empty, Loading, PageHead, StatusPill } from '../components/ui.jsx'
 
 const TABS = [
-  { id: 'pending', label: 'To review', match: (s) => s === 'pending_review' },
-  { id: 'ledger', label: 'Payment in progress', match: (s) => ['approved', 'awaiting_ledger', 'payment_pending', 'needs_reconciliation'].includes(s) },
+  { id: 'pending', label: 'Appeals to decide', match: (s) => s === 'pending_review' },
+  { id: 'ledger', label: 'Upheld, with the Union', match: (s) => ['approved', 'awaiting_ledger', 'payment_pending', 'needs_reconciliation'].includes(s) },
   { id: 'done', label: 'Closed', match: (s) => ['paid', 'rejected', 'returned', 'withdrawn', 'superseded'].includes(s) },
 ]
 
@@ -18,7 +18,7 @@ export default function ReviewQueue() {
   const [tab, setTab] = useState('pending')
   const { data: claims } = useApi(() => api.listReviewClaims(), [session.user.id])
 
-  if (!isReviewer(session)) return <Empty title="Treasurer access needed">Only treasurers can review claims.</Empty>
+  if (!isReviewer(session)) return <Empty title="Society treasurer access needed">Only society treasurers decide appeals.</Empty>
 
   const active = TABS.find((t) => t.id === tab)
   const rows = (claims ?? []).filter((c) => active.match(c.status))
@@ -27,9 +27,9 @@ export default function ReviewQueue() {
   return (
     <>
       <PageHead
-        eyebrow="Treasurer"
-        title="Review queue."
-        lede="Each claim was confirmed by the member and passed all seven checks. Check the receipt yourself. Approving sends it to your Ledger, and nothing is paid until you sign there."
+        eyebrow="Society treasurer"
+        title="Appeals."
+        lede="The agent approves and declines claims on its own. You only see a claim when a member appeals a decline. Upholding an appeal sends the payment to the Union treasurer, who signs it on the Ledger."
       />
 
       <div className="tabs" role="tablist">
@@ -44,8 +44,8 @@ export default function ReviewQueue() {
       {!claims ? (
         <Loading />
       ) : rows.length === 0 ? (
-        <Empty title={tab === 'pending' ? 'Queue is clear' : 'Nothing here'}>
-          <p>{tab === 'pending' ? 'New claims appear here once they pass the automated checks.' : ''}</p>
+        <Empty title={tab === 'pending' ? 'No appeals' : 'Nothing here'}>
+          <p>{tab === 'pending' ? 'A claim appears here when a member appeals the agent’s decision.' : ''}</p>
         </Empty>
       ) : (
         <div className="table-wrap">
@@ -80,7 +80,7 @@ export default function ReviewQueue() {
                     </td>
                     <td className="hide-sm">
                       {c.claimant.displayName}
-                      {own && <span className="sub">Your claim, another treasurer reviews it</span>}
+                      {own && <span className="sub">Your claim, another treasurer decides it</span>}
                     </td>
                     <td className="faint hide-sm">{c.society.name}</td>
                     <td className="num">{fmtMoney(f.amount, f.currency)}</td>

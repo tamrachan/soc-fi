@@ -378,6 +378,10 @@ p { margin: 0; }
 }
 .hold .fill { position: absolute; inset: 0; background: #3c7a54; transform-origin: left; }
 .hold span { position: relative; }
+.device-mirror { flex: 1; display: grid; align-content: center; gap: 18px; }
+.device-mirror img { width: 100%; image-rendering: pixelated; background: #000; border-radius: 6px; aspect-ratio: 2 / 1; }
+.device-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.device-buttons button { background: #111; color: #fff; border: 0; border-radius: 999px; padding: 10px 0; font-weight: 600; font-size: 13px; cursor: pointer; }
 .device-center { flex: 1; display: grid; place-items: center; text-align: center; gap: 10px; align-content: center; }
 .device-label { text-align: center; font: 400 10px/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel); margin-top: 14px; }
 .spinner { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #ccc; border-top-color: #111; animation: spin 0.8s linear infinite; }

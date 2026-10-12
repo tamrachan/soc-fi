@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { api } from '../data/api.js'
 import { useApi, useSession } from '../state/AppState.jsx'
-import { claimableSocieties, isReviewer, societiesWithPerm } from '../domain/permissions.js'
+import { claimableSocieties, isReviewer, isUnionTreasurer, societiesWithPerm } from '../domain/permissions.js'
 import { fmtMoney, relTime } from '../lib/format.js'
 import { Icon, StatusPill } from '../components/ui.jsx'
 import HowItWorksStory from '../components/story/HowItWorksStory.jsx'
@@ -116,12 +116,14 @@ function Dashboard({ session }) {
   const claimable = claimableSocieties(session)
   const { data: mine = [] } = useApi(() => api.listMyClaims(), [user.id])
   const { data: queue = [] } = useApi(() => (reviewer ? api.listReviewClaims() : Promise.resolve([])), [reviewer, user.id])
+  const unionTreasurer = isUnionTreasurer(session)
+  const { data: payments = [] } = useApi(() => (unionTreasurer ? api.listPayments() : Promise.resolve([])), [unionTreasurer, user.id])
+  const toSign = payments.filter((p) => p.status === 'awaiting_device')
   const reviewSocieties = societiesWithPerm(session, 'claims.review')
   const pendingMembership = session.memberships.filter((m) => m.status === 'pending')
   const first = user.displayName.split(' ')[0]
 
   const pending = queue.filter((c) => c.status === 'pending_review')
-  const awaiting = queue.filter((c) => ['awaiting_ledger', 'approved', 'needs_reconciliation'].includes(c.status))
   const actionable = mine.filter((c) => ['returned', 'validation_failed'].includes(c.status))
 
   return (
@@ -162,7 +164,7 @@ function Dashboard({ session }) {
               <strong>
                 {c.reference} needs your attention · {c.society.name}
               </strong>
-              {c.status === 'returned' ? c.latestReview?.reason : 'Some automated checks failed.'}
+              {c.status === 'returned' ? c.latestReview?.reason : 'The agent declined it. Fix it or appeal.'}
             </div>
             <Link to={`/claims/${c.id}`} className="btn btn-ghost btn-sm">
               Open
@@ -193,20 +195,27 @@ function Dashboard({ session }) {
         )}
       </div>
 
+      {unionTreasurer && (
+        <section className="section" style={{ marginTop: 32 }}>
+          <div className="grid grid-3">
+            <Link to="/payments" className="card stat">
+              <div className="k">Awaiting your Ledger</div>
+              <div className="v">{toSign.length}</div>
+              <div className="s">Approved, not yet signed</div>
+            </Link>
+          </div>
+        </section>
+      )}
+
       {reviewer && (
         <section className="section" style={{ marginTop: 32 }}>
           <div className="grid grid-3">
             <Link to="/review" className="card stat">
-              <div className="k">Waiting for review</div>
+              <div className="k">Appeals to decide</div>
               <div className="v">{pending.length}</div>
               <div className="s">
-                {pending.length ? `Oldest ${relTime(pending[0].createdAt)}` : 'Queue is clear'}
+                {pending.length ? `Oldest ${relTime(pending[0].createdAt)}` : 'No appeals waiting'}
               </div>
-            </Link>
-            <Link to="/payments" className="card stat">
-              <div className="k">Awaiting your Ledger</div>
-              <div className="v">{awaiting.length}</div>
-              <div className="s">Approved, not yet signed</div>
             </Link>
             {reviewSocieties.map((s) => {
               const r = s.reimbursement

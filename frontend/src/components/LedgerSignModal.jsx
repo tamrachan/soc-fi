@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { api, isMock } from '../data/api.js'
+import { api, hasDevice, isMock } from '../data/api.js'
 import { useAction } from '../state/AppState.jsx'
 import { fmtMoney, shortAddr } from '../lib/format.js'
 import { NETWORKS } from '../config.js'
@@ -50,9 +50,33 @@ function HoldToSign({ onDone, disabled, duration = 1300 }) {
   )
 }
 
+// Live mirror of the emulated device (hybrid mode): its real screen, and its two physical buttons.
+function DeviceMirror({ active }) {
+  const [src, setSrc] = useState(() => api.device.screenshotUrl())
+  useEffect(() => {
+    if (!active) return
+    const t = setInterval(() => setSrc(api.device.screenshotUrl()), 500)
+    return () => clearInterval(t)
+  }, [active])
+  const press = (button) => api.device.press(button).then(() => setSrc(api.device.screenshotUrl())).catch(() => {})
+
+  return (
+    <div className="device-mirror">
+      <img src={src} alt="Ledger device screen" />
+      <div className="device-buttons">
+        <button type="button" onClick={() => press('left')}>Left</button>
+        <button type="button" onClick={() => press('both')}>Both</button>
+        <button type="button" onClick={() => press('right')}>Right</button>
+      </div>
+    </div>
+  )
+}
+
 /**
  * Simulates the treasurer's Ledger prompt. In production the backend builds the transaction from the
  * trusted payment record and the physical device shows these values (ERC-7730 clear signing).
+ * With VITE_DATA_SOURCE=hybrid nothing is simulated: the transfer is sent to the (emulated) device
+ * as soon as the modal opens, and only its buttons can sign or reject it.
  */
 export default function LedgerSignModal({ payment, claim, onClose }) {
   const [stage, setStage] = useState('connecting')
@@ -82,6 +106,21 @@ export default function LedgerSignModal({ payment, claim, onClose }) {
     if (res.ok) setStage('rejected')
   }
 
+  // Real device: the outcome comes from the device, so a rejection there cancels the payment here.
+  const sendToDevice = async () => {
+    setStage('signing')
+    const res = await confirm(payment.id)
+    if (res.ok) setStage('sent')
+    else if (res.error?.code === 'device-rejected') await reject()
+    else setStage('review')
+  }
+  const sentRef = useRef(false)
+  useEffect(() => {
+    if (!hasDevice || stage !== 'review' || sentRef.current) return
+    sentRef.current = true
+    sendToDevice()
+  }, [stage])
+
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="ledger-title">
       <div className="modal">
@@ -105,7 +144,8 @@ export default function LedgerSignModal({ payment, claim, onClose }) {
                       <div style={{ fontSize: 13 }}>Waiting for device…</div>
                     </div>
                   )}
-                  {(stage === 'review' || stage === 'signing') && (
+                  {hasDevice && (stage === 'review' || stage === 'signing') && <DeviceMirror active={stage === 'signing'} />}
+                  {!hasDevice && (stage === 'review' || stage === 'signing') && (
                     <>
                       <div className="ds-title">Reimburse claim</div>
                       <div className="ds-sub">
@@ -137,7 +177,7 @@ export default function LedgerSignModal({ payment, claim, onClose }) {
                     <div className="device-center">
                       <Icon name="check" size={36} style={{ color: '#3c7a54' }} />
                       <div className="ds-title">Transaction signed</div>
-                      <div className="ds-sub">Broadcasting from SocFi</div>
+                      <div className="ds-sub">{hasDevice ? 'Sent to the network' : 'Broadcasting from SocFi'}</div>
                     </div>
                   )}
                   {stage === 'rejected' && (
@@ -149,13 +189,13 @@ export default function LedgerSignModal({ payment, claim, onClose }) {
                   )}
                 </div>
               </div>
-              <div className="device-label">Ledger Flex · {isMock ? 'simulated' : 'connected'}</div>
+              <div className="device-label">{hasDevice ? api.device.label : `Ledger Flex · ${isMock ? 'simulated' : 'connected'}`}</div>
             </div>
 
             <div className="stack" style={{ '--stack': '22px' }}>
               {stage === 'sent' ? (
                 <>
-                  <h2>Signed. Waiting for the network.</h2>
+                  <h2>{hasDevice ? 'Signed and sent.' : 'Signed. Waiting for the network.'}</h2>
                   <p className="muted">
                     The claim shows <em>Payment pending</em> until the transaction is confirmed on-chain. It is only marked paid
                     after confirmation.
@@ -204,7 +244,18 @@ export default function LedgerSignModal({ payment, claim, onClose }) {
                     <dt>From</dt>
                     <dd className="addr">Treasury {shortAddr(payment.sourceAddress)}</dd>
                   </dl>
-                  {isMock && (
+                  {hasDevice && stage === 'signing' && (
+                    <p className="muted">
+                      Waiting for the device. Press <strong>Right</strong> to page through the amount, recipient and network,
+                      then <strong>Both</strong> on “Sign transaction” — or on “Reject transaction”, one screen further.
+                    </p>
+                  )}
+                  {hasDevice && stage === 'review' && confirmState.error && (
+                    <button className="btn btn-primary" onClick={sendToDevice}>
+                      Send to the Ledger again
+                    </button>
+                  )}
+                  {isMock && !hasDevice && (
                     <div className="field">
                       <label htmlFor="outcome">Demo: what the network does next</label>
                       <select id="outcome" className="select" value={outcome} onChange={(e) => setOutcome(e.target.value)}>

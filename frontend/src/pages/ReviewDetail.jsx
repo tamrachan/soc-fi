@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../data/api.js'
 import { useAction, useApi, useSession } from '../state/AppState.jsx'
-import { hasPerm } from '../domain/permissions.js'
+import { hasPerm, isUnionTreasurer } from '../domain/permissions.js'
 import { CATEGORIES } from '../data/schema.js'
 import { fmtDate, fmtMoney, shortAddr } from '../lib/format.js'
 import { NETWORKS } from '../config.js'
@@ -65,7 +65,7 @@ function NextActions({ nextId }) {
   )
 }
 
-function PaymentPanel({ claim, onOpenLedger, nextId }) {
+function PaymentPanel({ claim, onOpenLedger, nextId, canSign }) {
   const p = claim.payment
   const [retry, retryState] = useAction(() => api.retryPayment(p.id))
   const [reconcile, recState] = useAction(() => api.reconcilePayment(p.id))
@@ -79,16 +79,25 @@ function PaymentPanel({ claim, onOpenLedger, nextId }) {
           attempt {Math.max(p.attempts, 1)}
         </span>
       </div>
-      {claim.status === 'awaiting_ledger' && (
+      {!canSign && ['awaiting_ledger', 'approved'].includes(claim.status) && (
+        <>
+          <h2>With the Union treasurer.</h2>
+          <p className="muted" style={{ fontSize: 14 }}>Only the Union treasurer holds the Ledger. Nothing is paid until they sign there.</p>
+        </>
+      )}
+      {canSign && claim.status === 'awaiting_ledger' && (
         <>
           <h2>Waiting for your Ledger.</h2>
-          <p className="muted" style={{ fontSize: 14 }}>Approved. Connect your device and check the amount and recipient on its screen.</p>
+          <p className="muted" style={{ fontSize: 14 }}>
+            {p.approvedBy === 'agent' ? 'Approved by the agent.' : 'Appeal upheld by the society treasurer.'} Your job is to check that the
+            amount and recipient on the device match this claim.
+          </p>
           <button className="btn btn-primary" onClick={onOpenLedger}>
             Open Ledger prompt
           </button>
         </>
       )}
-      {claim.status === 'approved' && (
+      {canSign && claim.status === 'approved' && (
         <>
           <h2>Rejected on device.</h2>
           <p className="muted" style={{ fontSize: 14 }}>No transaction was signed. The approval still stands, so you can send it to the Ledger again.</p>
@@ -110,10 +119,10 @@ function PaymentPanel({ claim, onOpenLedger, nextId }) {
             <span className="spinner dark" /> Waiting for on-chain confirmation…
           </div>
           <p className="hint">Not marked paid until it's confirmed.</p>
-          <NextActions nextId={nextId} />
+          {!canSign && <NextActions nextId={nextId} />}
         </>
       )}
-      {claim.status === 'needs_reconciliation' && (
+      {canSign && claim.status === 'needs_reconciliation' && (
         <>
           <Notice tone="rose" title="Outcome unknown">
             The network didn't confirm in time. Don't pay again. Look the transaction up first so the member isn't paid twice.
@@ -128,7 +137,7 @@ function PaymentPanel({ claim, onOpenLedger, nextId }) {
           <Notice tone="sage" title={`Paid ${fmtMoney(p.amount, 'USDC')}`}>
             Confirmed on {NETWORKS[p.network]?.label}.
           </Notice>
-          <NextActions nextId={nextId} />
+          {!canSign && <NextActions nextId={nextId} />}
         </>
       )}
       {p.txHash && (
@@ -150,7 +159,8 @@ export default function ReviewDetail() {
   const { id } = useParams()
   const session = useSession()
   const { data: claim, error } = useApi(() => api.getClaim(id), [id])
-  const { data: queue = [] } = useApi(() => api.listReviewClaims(), [session.user.id])
+  const unionTreasurer = isUnionTreasurer(session)
+  const { data: queue = [] } = useApi(() => (unionTreasurer ? Promise.resolve([]) : api.listReviewClaims()), [session.user.id])
   const { data: sample } = useApi(
     () => (claim?.latest.receipt.kind === 'sample' ? api.getReceipt(claim.latest.receipt.sampleId) : Promise.resolve(null)),
     [claim?.latest.receipt.sampleId],
@@ -161,7 +171,8 @@ export default function ReviewDetail() {
 
   if (error) return <Empty title="Couldn't open claim">{error.message}</Empty>
   if (!claim) return <Loading />
-  if (!hasPerm(session, claim.societyId, 'claims.review')) return <Empty title="Treasurer access needed">You can't review claims for this society.</Empty>
+  if (!unionTreasurer && !hasPerm(session, claim.societyId, 'claims.review'))
+    return <Empty title="Treasurer access needed">You can't review claims for this society.</Empty>
 
   const v = claim.latest
   const x = v.aiExtraction
@@ -171,12 +182,13 @@ export default function ReviewDetail() {
   const nextId = queue.find((c) => c.status === 'pending_review' && c.id !== claim.id && c.claimantId !== session.user.id)?.id
   const first = claim.claimant.displayName.split(' ')[0]
   const justDecided = decidedOn === claim.id && ['returned', 'rejected'].includes(claim.status)
+  const back = unionTreasurer ? ['/payments', 'Payments'] : ['/review', 'Appeals']
 
   return (
     <>
       <div style={{ marginBottom: 20 }}>
-        <Link to="/review" className="btn btn-quiet btn-sm" style={{ paddingLeft: 0 }}>
-          <Icon name="back" /> Review queue
+        <Link to={back[0]} className="btn btn-quiet btn-sm" style={{ paddingLeft: 0 }}>
+          <Icon name="back" /> {back[1]}
         </Link>
       </div>
       <PageHead
@@ -194,17 +206,22 @@ export default function ReviewDetail() {
       <div className="stack" style={{ '--stack': '16px', marginBottom: 32 }}>
         {justDecided && (
           <div className="card card-pad stack" style={{ '--stack': '14px' }}>
-            <span className="eyebrow">{claim.status === 'returned' ? 'Edits requested' : 'Claim denied'}</span>
+            <span className="eyebrow">{claim.status === 'returned' ? 'Edits requested' : 'Appeal denied'}</span>
             <h2>{claim.status === 'returned' ? `Sent back to ${first}.` : `${first} has been told why.`}</h2>
             <p className="muted" style={{ fontSize: 14 }}>“{claim.latestReview?.reason}”</p>
             <NextActions nextId={nextId} />
           </div>
         )}
+        {claim.appeal && claim.status === 'pending_review' && (
+          <Notice tone="ice" title={`${first} appealed the agent's decision`}>
+            “{claim.appeal.reason}”
+          </Notice>
+        )}
         {canDecide && (
           <DecisionBar
             key={`${claim.id}-${claim.currentVersion}`}
             claim={claim}
-            onApproved={() => setLedgerOpen(true)}
+            onApproved={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             onDecided={() => {
               setDecidedOn(claim.id)
               window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -216,7 +233,7 @@ export default function ReviewDetail() {
             Another authorised reviewer has to decide on it.
           </Notice>
         )}
-        {claim.payment && <PaymentPanel claim={claim} nextId={nextId} onOpenLedger={() => setLedgerOpen(true)} />}
+        {claim.payment && <PaymentPanel claim={claim} nextId={nextId} canSign={unionTreasurer} onOpenLedger={() => setLedgerOpen(true)} />}
       </div>
 
       <div className="split">
@@ -254,7 +271,7 @@ export default function ReviewDetail() {
               </table>
               <p style={{ fontSize: 14 }}>
                 If approved, payment goes to <span className="addr">{shortAddr(claim.claimant.walletAddress)}</span>, {first}'s saved
-                wallet. Your Ledger will show that address.
+                wallet. The Union's Ledger will show that address.
               </p>
             </div>
           )}
@@ -308,7 +325,7 @@ export default function ReviewDetail() {
         </div>
       </div>
 
-      {ledgerOpen && claim.payment && (
+      {ledgerOpen && unionTreasurer && claim.payment && (
         <LedgerSignModal
           payment={claim.payment}
           claim={claim}
