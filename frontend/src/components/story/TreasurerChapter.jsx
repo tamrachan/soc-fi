@@ -5,16 +5,16 @@ import { captions, useScrollTimeline } from './useScrollTimeline.js'
 
 const STEP = 2500
 const STEPS = [
-  { title: 'Open the claim', body: 'An email arrives when Priya submits, with the claim, the event and the warning. Every society’s claims wait in one queue.' },
-  { title: 'See what the AI flagged', body: 'The warning sits right under the amount Priya changed, so the treasurer checks the one field that needs a human. The other checks already passed.' },
-  { title: 'Approve, edit or deny', body: 'One decision. Requested edits and denials go back to Priya with a reason she can act on.' },
-  { title: 'Sign on the Union’s Ledger', body: 'The hardware wallet’s own screen shows the real amount and recipient. The treasurer presses its button to sign, and USDC moves from the Union’s wallet to Priya’s.' },
+  { title: 'Open the queue', body: 'Every claim the agent approves lands in the Union treasurer’s payments queue, from every society, with anything that needs a second look marked.' },
+  { title: 'Check what’s flagged', body: 'The warning sits right under the amount you changed, next to the receipt. The treasurer checks that one field; the agent’s other checks already passed.' },
+  { title: 'Review it on the device', body: 'One click sends the payment to the Union’s Ledger. Its own screen shows the real amount and recipient, so even a hacked laptop can’t change them.' },
+  { title: 'Sign, or reject', body: 'If it matches, the treasurer holds the button to sign and USDC moves to your saved wallet. If it doesn’t, they reject on the device and nothing is sent.' },
 ]
 
 const QUEUE = [
-  ['Domino’s Pizza', 'Blockchain Society · Ledger hackathon', '£145.90', '1 warning'],
-  ['Tesco Express', 'The Baking Society · bread workshop', '£14.85', '7/7'],
-  ['Pixel Print Co.', 'FinTech Society · freshers’ fair', '£38.00', '7/7'],
+  ['Domino’s Pizza', 'Blockchain Society · Ledger hackathon', '£145.90', '1 to check'],
+  ['Tesco Express', 'The Baking Society · bread workshop', '£14.85', 'all clear'],
+  ['Co-op Food', 'Blockchain Society · hackathon lunch', '£48.00', 'all clear'],
 ]
 
 const FIELDS = [
@@ -31,10 +31,9 @@ export default function TreasurerChapter() {
     const cursor = $('.cursor')
     const click = (at) => tl.add(cursor, { scale: [1, 0.8, 1], duration: 250 }, at)
 
-    // 1. Email arrives, open the claim from the queue
-    tl.add($('.mail-toast'), { opacity: [0, 1], translateY: [-16, 0], duration: 350, ease: 'outCubic' }, 100)
-      .add($('.q-row'), { opacity: [0, 1], translateX: [-24, 0], duration: 350 }, stagger(160, { start: 600 }))
-      .add(cursor, { opacity: [0, 1], translateX: [520, 330], translateY: [400, 205], duration: 700, ease: 'inOutCubic' }, 1300)
+    // 1. Open the claim from the payments queue (everything here was approved by the agent)
+    tl.add($('.q-row'), { opacity: [0, 1], translateX: [-24, 0], duration: 350 }, stagger(180, { start: 200 }))
+      .add(cursor, { opacity: [0, 1], translateX: [520, 330], translateY: [400, 128], duration: 700, ease: 'inOutCubic' }, 1200)
       .add($('.q-row.first'), { backgroundColor: ['rgba(18,19,23,0)', 'rgba(204,145,102,0.12)'], duration: 250 }, 1950)
     click(2000)
 
@@ -47,17 +46,7 @@ export default function TreasurerChapter() {
       .add($('.rc-highlight'), { opacity: [0, 1, 0.6, 1], scale: [1.15, 1, 1.04, 1], duration: 900 }, 3800)
       .add($('.cf-summary'), { opacity: [0, 1], duration: 300 }, 4300)
 
-    // 3. Decide
-    tl.add($('.decide-row button'), { opacity: [0, 1], translateY: [10, 0], duration: 300 }, stagger(120, { start: 5000 }))
-      .add(cursor, { translateX: [330, 525], translateY: [205, 405], duration: 500 }, 5400)
-      .add($('.d-deny'), { borderColor: ['rgba(46,48,56,1)', 'rgba(214,143,134,0.8)', 'rgba(46,48,56,1)'], duration: 450 }, 5800)
-      .add(cursor, { translateX: [525, 415], duration: 350 }, 6150)
-      .add($('.d-edit'), { borderColor: ['rgba(46,48,56,1)', 'rgba(204,145,102,0.8)', 'rgba(46,48,56,1)'], duration: 450 }, 6450)
-      .add(cursor, { translateX: [415, 305], duration: 350 }, 6800)
-    click(7150)
-    tl.add($('.d-approve'), { backgroundColor: ['rgba(18,19,23,1)', 'rgba(143,181,154,0.22)'], borderColor: ['rgba(46,48,56,1)', 'rgba(143,181,154,1)'], duration: 250 }, 7200)
-
-    // 4. Press the hardware button: page through the screen, then hold to sign
+    // 3. Send it to the Ledger, then page through amount and recipient on the device
     const hint = $('.press-hint')
     const btn = $('.hw-btn-r')
     const ripple = $('.btn-ripple')
@@ -71,29 +60,35 @@ export default function TreasurerChapter() {
         .add(btn, { translateY: [0, 2, 0], duration: 180 }, at)
         .add(ripple, { opacity: [0.9, 0], scale: [0.6, 1.9], duration: 260, ease: 'outQuad' }, at + 60)
 
-    tl.add(cursor, { opacity: [1, 0], duration: 200 }, 7500)
-      .add($('.w-claim'), { opacity: [1, 0], duration: 250 }, 7600)
-      .add($('.w-ledger'), { opacity: [0, 1], duration: 300 }, 7700)
-      .add($('.hw-wallet'), { translateY: [40, 0], opacity: [0, 1], duration: 450, ease: 'outCubic' }, 7750)
-      .add(hint, { opacity: [0, 1], duration: 250 }, 7950)
-    press(8150)
-    page(1, 8250)
-    press(8400)
-    page(2, 8500)
-    press(8650)
-    page(3, 8750)
-    tl.add($('.hint-press'), { opacity: [1, 0], duration: 80 }, 8820)
-      .add($('.hint-hold'), { opacity: [0, 1], duration: 80 }, 8850)
-      .add(hint, { translateY: [0, 6], duration: 100 }, 8850)
-      .add(btn, { translateY: [0, 2], duration: 100 }, 8850)
-      .add($('.oled-progress'), { scaleX: [0, 1], duration: 450, ease: 'linear' }, 8900)
-      .add(btn, { translateY: [2, 0], duration: 100 }, 9350)
-    page(4, 9350)
-    tl.add(hint, { opacity: [1, 0], duration: 200 }, 9400)
-      .add($('.coin'), { opacity: [0, 1, 1, 0], translateY: [0, 40, 90, 120], translateX: [0, 30, 24, 0], scale: [0.6, 1, 1, 0.7], duration: 650, ease: 'inOutSine' }, 9400)
-      .add($('.bal-from .old, .bal-to .old'), { opacity: [1, 0], duration: 150 }, 9800)
-      .add($('.bal-from .new, .bal-to .new'), { opacity: [0, 1], duration: 150 }, 9850)
-      .add($('.paid-chip'), { opacity: [0, 1], scale: [0.8, 1], duration: 150 }, 9850)
+    tl.add($('.ledger-row'), { opacity: [0, 1], translateY: [10, 0], duration: 300 }, 5000)
+      .add(cursor, { translateX: [330, 330], translateY: [128, 400], duration: 600 }, 5300)
+    click(5950)
+    tl.add($('.ledger-row .ledger-btn'), { scale: [1, 0.95, 1], duration: 250 }, 5950)
+      .add(cursor, { opacity: [1, 0], duration: 200 }, 6150)
+      .add($('.w-claim'), { opacity: [1, 0], duration: 250 }, 6200)
+      .add($('.w-ledger'), { opacity: [0, 1], duration: 300 }, 6300)
+      .add($('.hw-wallet'), { translateY: [40, 0], opacity: [0, 1], duration: 450, ease: 'outCubic' }, 6350)
+      .add(hint, { opacity: [0, 1], duration: 250 }, 6600)
+    press(6800)
+    page(1, 6900)
+    press(7050)
+    page(2, 7150)
+    press(7300)
+    page(3, 7400)
+
+    // 4. Hold to sign; the USDC moves only after that
+    tl.add($('.hint-press'), { opacity: [1, 0], duration: 80 }, 7600)
+      .add($('.hint-hold'), { opacity: [0, 1], duration: 80 }, 7650)
+      .add(hint, { translateY: [0, 6], duration: 100 }, 7650)
+      .add(btn, { translateY: [0, 2], duration: 100 }, 7650)
+      .add($('.oled-progress'), { scaleX: [0, 1], duration: 800, ease: 'linear' }, 7700)
+      .add(btn, { translateY: [2, 0], duration: 100 }, 8500)
+    page(4, 8500)
+    tl.add(hint, { opacity: [1, 0], duration: 200 }, 8600)
+      .add($('.coin'), { opacity: [0, 1, 1, 0], translateY: [0, 40, 90, 120], translateX: [0, 30, 24, 0], scale: [0.6, 1, 1, 0.7], duration: 700, ease: 'inOutSine' }, 8700)
+      .add($('.bal-from .old, .bal-to .old'), { opacity: [1, 0], duration: 150 }, 9200)
+      .add($('.bal-from .new, .bal-to .new'), { opacity: [0, 1], duration: 150 }, 9250)
+      .add($('.paid-chip'), { opacity: [0, 1], scale: [0.8, 1], duration: 150 }, 9250)
   })
 
   return (
@@ -111,13 +106,8 @@ export default function TreasurerChapter() {
 
           <div className="win-body">
             <div className="scene w-inbox">
-              <div className="mail-toast">
-                <span className="mono">✉ New claim · just now</span>
-                <b>Priya Raman · Pizza · Ledger hackathon · £145.90</b>
-                <span className="copper">⚠ 1 warning: amount differs from the AI read</span>
-              </div>
               <div className="w-title">
-                <b>Review queue</b> <span className="mono faint">3 waiting</span>
+                <b>Payments</b> <span className="mono faint">3 approved by the agent · awaiting Ledger</span>
               </div>
               {QUEUE.map(([merchant, sub, amt, checks], i) => (
                 <div key={merchant} className={`q-row ${i === 0 ? 'first' : ''}`}>
@@ -153,7 +143,7 @@ export default function TreasurerChapter() {
               <div className="claim-side">
                 <span className="mono copper">CLM-0007 · Blockchain Society</span>
                 <b className="claim-amt">£145.90 · Ledger hackathon</b>
-                <span className="faint">Priya Raman · pizza for ~40 hackers</span>
+                <span className="faint">Your claim · pizza for ~40 hackers</span>
                 <div className="cf">
                   {FIELDS.map(([k, v]) => (
                     <div key={k} className="cf-row">
@@ -167,13 +157,12 @@ export default function TreasurerChapter() {
                     <span>£145.90</span>
                     <span className="copper">⚠</span>
                   </div>
-                  <div className="cf-warn">Changed by Priya. The AI read £14.59, so check the receipt total.</div>
+                  <div className="cf-warn">Changed by you. The reader saw £14.59, so check the receipt total.</div>
                 </div>
-                <span className="cf-summary">✓ 6 other checks passed · no hidden instructions</span>
-                <div className="decide-row">
-                  <button className="d-approve">✓ Approve</button>
-                  <button className="d-edit">✎ Request edits</button>
-                  <button className="d-deny">✕ Deny</button>
+                <span className="cf-summary">✓ Approved by the agent · 7 other checks passed</span>
+                <div className="ledger-row">
+                  <span className="ledger-btn">Open Ledger prompt</span>
+                  <span className="faint">Reject on the device if anything’s off</span>
                 </div>
               </div>
             </div>
@@ -238,7 +227,7 @@ export default function TreasurerChapter() {
                 <div className="flow-line" />
                 <span className="coin">$</span>
                 <div className="wallet bal-to">
-                  <span className="mono faint">Priya · saved wallet</span>
+                  <span className="mono faint">You · saved wallet</span>
                   <b>
                     <span className="amt">
                       <span className="old">0.00</span>

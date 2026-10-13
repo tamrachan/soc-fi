@@ -5,11 +5,11 @@ import { captions, tap, useScrollTimeline } from './useScrollTimeline.js'
 
 const STEP = 2000
 const STEPS = [
-  { title: 'Snap the receipt', body: 'Priya, on the Blockchain Society committee, bought pizza for the society’s hackathon with Ledger. She photographs the receipt in the app.' },
-  { title: 'The AI reads it', body: 'Merchant, date, total and category fill themselves in. The AI only suggests values. It can’t submit or pay anything.' },
-  { title: 'Wrong? Override it', body: 'The AI misread the total as £14.59. Priya corrects it to £145.90. The change is marked, so the Union treasurer will check it against the receipt.' },
-  { title: 'Add the event and submit', body: 'She says what it was for (pizza for the Ledger hackathon), ticks each field against the receipt and submits.' },
-  { title: 'Done', body: 'The Union treasurer gets an email with the claim, the event and the amount warning. Any payment goes to the wallet saved on Priya’s account.' },
+  { title: 'Snap the receipt', body: 'You’re on the Blockchain Society committee and bought pizza for the society’s hackathon with Ledger. Photograph the receipt in the app.' },
+  { title: 'Your phone reads it', body: 'On-device OCR reads the merchant, date, total and category and fills in the claim. These are only suggestions until you check them.' },
+  { title: 'Wrong? Correct it', body: 'The reader saw the total as £14.59. You correct it to £145.90. The change is kept and marked, so the Union treasurer checks it against the receipt.' },
+  { title: 'Add the event and submit', body: 'Say what it was for (pizza for the Ledger hackathon), tick each field against the receipt and submit.' },
+  { title: 'Checked in seconds', body: 'The agent runs its eight checks straight away. Approved: the payment is drafted and waits for the Union treasurer’s Ledger. It goes to the wallet saved on your account.' },
 ]
 
 const ROWS = [
@@ -81,7 +81,7 @@ export default function MemberChapter() {
     tap(tl, t, 7600)
     tl.add($('.ph-submit'), { scale: [1, 0.94, 1], duration: 250 }, 7700)
 
-    // 5. Submitted: the email to the Union treasurer carries the warning
+    // 5. Submitted: the agent checks it at once; approved claims wait for the Union's Ledger
     tl.add($('.s-form'), { opacity: [1, 0], duration: 300 }, 8000)
       .add($('.s-done'), { opacity: [0, 1], duration: 300 }, 8100)
       .add($('.done-ring'), { strokeDashoffset: [100, 0], duration: 600, ease: 'outCubic' }, 8250)
@@ -91,7 +91,7 @@ export default function MemberChapter() {
   })
 
   return (
-    <StoryFrame sectionRef={ref} eyebrow="Committee member · Blockchain Society" title="From pizza receipt to claim in a minute." steps={STEPS} height="560vh">
+    <StoryFrame sectionRef={ref} eyebrow="You · society committee member" title="From pizza receipt to claim in a minute." steps={STEPS} height="560vh">
       <div className="phone-wrap">
         <div className="phone" aria-hidden="true">
           <div className="ph-status">
@@ -166,14 +166,14 @@ export default function MemberChapter() {
               <path className="done-check" d="M38 62 l15 15 l30 -32" pathLength="100" />
             </svg>
             <div className="done-text">
-              <b>Claim submitted</b>
-              <span className="mono">CLM-0007 · In review</span>
+              <b>Approved by the agent</b>
+              <span className="mono">CLM-0007 · Awaiting Ledger</span>
             </div>
             <div className="mail-card">
-              <span className="mail-to mono">✉ Emailed to the Union treasurer</span>
-              <b>New claim · Blockchain Society</b>
-              <span>Pizza · Ledger hackathon · £145.90</span>
-              <span className="mail-warn">⚠ Amount differs from the AI read (£14.59)</span>
+              <span className="mail-to mono">Agent checks · 8 of 8 passed</span>
+              <b>Pizza · Ledger hackathon · £145.90</b>
+              <span>Waiting for the Union treasurer to sign</span>
+              <span className="mail-warn">⚠ Amount changed by you: the treasurer will check it</span>
             </div>
           </div>
 

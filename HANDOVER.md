@@ -315,6 +315,14 @@ The team confirmed this flow. The landing-page animation (`src/components/story/
 
 ## Changelog
 
+- **2026-10-12 (b), landing page only, no schema or API change:** The scroll story now matches the agent-decides flow. It has a new middle chapter, `components/story/AgentChapter.jsx`, which shows:
+  - the eight `CHECKS`, each with the reason it can fail;
+  - Priya's claim passing;
+  - a doctored receipt failing `under_limit` and `not_flagged`;
+  - a Baking Society claim over its £80 limit, appealed and approved by the society treasurer.
+
+  The Union treasurer chapter now opens the Payments queue, checks the flagged field, then signs or rejects on the Ledger. It no longer shows an email or approve/edit/deny. The member chapter ends with "Approved by the agent · Awaiting Ledger". The hero bullets and the Boundary section are rewritten to match. If the backend changes the check list or the £200 / £80 / 90-day values, update `AgentChapter.jsx`.
+
 - **2026-10-12 (backend integration, branch `backend-integration`):**
   - **No Firebase.** A third data source, `VITE_DATA_SOURCE=hybrid` (`src/data/hybridApi.js`), spreads `mockApi` and replaces two methods with calls to `backend/` (`VITE_BACKEND_URL`, default `http://localhost:3000`): `submitClaim` (asks the LLM agent for a verdict first) and `confirmOnDevice` (real signature on the emulated Ledger, real USDC transfer). It also adds `api.device` (`label`, `screenshotUrl()`, `press(button)`). `isMock` is true for both mock and hybrid; the new `hasDevice` export is true only for hybrid.
   - **The agent decides (most of §8 is now built).** `submitClaim` no longer sends a passing claim to `pending_review`. A claim that passes gets a payment at once and status `awaiting_ledger`; one that fails gets `validation_failed`. `submitClaim` accepts an optional `agentVerdict: { decision, reason, flags }`, stored as an eighth check, `agent_judgement` (added to `CHECKS`; only present in hybrid mode).

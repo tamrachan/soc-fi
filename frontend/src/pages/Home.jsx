@@ -30,18 +30,17 @@ function Boundary() {
         <div>
           <h3>The agent, on its own</h3>
           <ol>
-            <li>Reads the receipt and suggests merchant, date, total and category</li>
-            <li>Flags anything suspicious, like text written to trick an AI</li>
-            <li>Has no payment tools and never sees a wallet key</li>
-            <li>Its suggestions are checked by the member, then by seven plain-code rules</li>
+            <li>Runs eight checks on every claim: receipt total, duplicates, budget, category, date, limit, tampering, and whether it's a reasonable expense</li>
+            <li>Declines a claim with a plain reason. The member fixes it or appeals to their society treasurer</li>
+            <li>Approves claims that pass, but has no payment tools and never sees a wallet key</li>
           </ol>
         </div>
         <div>
-          <h3>Only the Union treasurer, on a Ledger</h3>
+          <h3>Only a person</h3>
           <ol>
-            <li>Approves one exact version of a claim</li>
-            <li>Sees the real amount and recipient on the device's own screen</li>
-            <li>Holds to sign, or rejects. Nothing moves without it</li>
+            <li>The society treasurer decides appeals: approve, request edits or deny</li>
+            <li>The Union treasurer sees the real amount and recipient on the Ledger's own screen</li>
+            <li>They hold the button to sign, or reject. Nothing moves without it</li>
             <li>Money goes only to the member's saved wallet, never an address from a receipt</li>
           </ol>
         </div>
@@ -51,7 +50,8 @@ function Boundary() {
 }
 
 const HERO_POINTS = [
-  ['Snap the receipt', 'An AI fills in your claim in seconds. You check it and submit.'],
+  ['Snap the receipt', 'Your phone reads it and fills in the claim. You check it and submit.'],
+  ['Checked in seconds', 'An agent checks it against your society’s rules and tells you exactly why if it can’t pass.'],
   ['Paid in minutes', 'USDC goes straight to the wallet on your account. No forms, no week-long wait.'],
   ['Secured by hardware', 'The AI can’t pay anyone. Only the Union treasurer’s Ledger can release money.'],
 ]
