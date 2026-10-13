@@ -2,6 +2,63 @@
 
 An AI agent checks student-society expense claims in seconds and decides them on its own, but it can't pay anyone. In the app the agent is called **Kevin**, the Union's virtual treasurer (`AGENT_NAME` in `frontend/src/config.js`); "the agent" and "Kevin" mean the same thing throughout. Only the Union treasurer's Ledger can release the money. See [`Context/CONTEXT.md`](Context/CONTEXT.md) and [`user_flows.md`](user_flows.md).
 
+**[Live demo](https://tamrachan.github.io/ledger-hackathon/)** (mock mode, works on a phone) · **[Pitch deck (PDF)](pitch/SocFi-pitch.pdf)** · [Backend and Ledger README](backend/README.md) · [Schemas and API contract](HANDOVER.md)
+
+Built for the N3XT Hackathon @ OP3N 2026 (Ledger), 10–13 October 2026.
+
+## For judges: where to find each criterion
+
+| Criterion | What to look at |
+|---|---|
+| **Technical execution** (25%) | A real end-to-end payout: claim in the app, agent verdict, clear-signed on an emulated Nano S Plus, USDC on Base Sepolia ([backend/README.md § Verified](backend/README.md#verified)). Signing: [`backend/src/ledger.ts`](backend/src/ledger.ts), [`backend/src/payout.ts`](backend/src/payout.ts). Key Ring: [`backend/scripts/keyring.cjs`](backend/scripts/keyring.cjs), [`backend/src/secrets.ts`](backend/src/secrets.ts). The eight checks: [`frontend/src/domain/rules.js`](frontend/src/domain/rules.js) and [`backend/src/agent.ts`](backend/src/agent.ts). |
+| **Usefulness and relevance for Ledger** (20%) | The Ledger is the only thing that can move money, and no server holds a key. Key Ring also seals the agent's own API key. See [The boundary](#how-a-claim-flows) and [Security model](#security-model). |
+| **Innovation / originality** (20%) | The agent decides each claim on its own but cannot pay. The **Attack demo** row in the [demo script](#demo-script) turns the safeguards off on purpose; the Ledger screen still catches the wrong wallet. |
+| **User experience** (15%) | Open the [live demo](https://tamrachan.github.io/ledger-hackathon/) on a phone: scan a receipt, correct a field, submit. Free on-device OCR: [`frontend/src/domain/reader/`](frontend/src/domain/reader/). |
+| **New use cases for Ledger** (10%) | The pattern (an agent proposes, a person signs on hardware) and where else it applies: slides 9 and 15 of the [pitch deck](pitch/SocFi-pitch.pdf). |
+| **Clarity, presentation and documentation** (10%) | This README, the [backend README](backend/README.md) (API, gotchas, developer-experience notes for Ledger), [HANDOVER.md](HANDOVER.md) (schemas, status machine, API contract) and the [deck](pitch/SocFi-pitch.pdf). |
+
+## Architecture
+
+```mermaid
+flowchart LR
+  M["Member's phone<br/>React PWA<br/>on-device OCR"] -->|claim + receipt| A["Agent (Kevin)<br/>7 code checks<br/>+ LLM judgement"]
+  A -->|declined, with reasons| M
+  M -->|appeal| S["Society treasurer<br/>approve / edits / deny"]
+  A -->|approved| Q["Union treasurer<br/>Payments queue"]
+  S -->|approved on appeal| Q
+  Q -->|unsigned USDC transfer| L["Ledger device<br/>DMK + Ethereum Signer Kit<br/>clear signing"]
+  L -->|signature| B["Base Sepolia<br/>USDC to the member's<br/>saved wallet"]
+  K["Ledger Key Ring"] -.->|seals the agent's API key| A
+```
+
+Everything left of the Ledger can be automated or fooled. Only a confirmation on the device, where the amount, recipient and network are shown in clear, releases money.
+
+## Repository layout
+
+| Path | What it is |
+|---|---|
+| [`frontend/`](frontend/) | React + Vite web app (installable PWA). Mock data layer, receipt reader, every screen, and the scroll-driven landing page |
+| [`frontend/src/data/`](frontend/src/data/) | The API the screens call: `mockApi.js` (browser storage), `hybridApi.js` (mock plus the real agent and Ledger), `schema.js` (statuses, checks, permissions) |
+| [`frontend/src/domain/`](frontend/src/domain/) | Plain-code rules: the checks, permissions, committee-record matching, prompt-injection scan |
+| [`backend/`](backend/) | Express + TypeScript API: the LLM agent, Ledger signing through the DMK, USDC payouts, Key Ring |
+| [`pitch/`](pitch/) | Pitch deck (`.pptx` and `.pdf`) with speaker notes |
+| [`demo-receipts/`](demo-receipts/) | Receipt images for the demo |
+| [`HANDOVER.md`](HANDOVER.md) | Data schemas, claim status machine, API contract and changelog |
+| [`Context/`](Context/), [`user_flows.md`](user_flows.md) | The hackathon brief and the original user flows |
+
+## Security model
+
+| Threat | What stops it |
+|---|---|
+| Hidden instructions for the AI on a receipt | The model's output is locked to a schema and extra fields are discarded. Plain code blocks AI-directed text and wallet addresses on receipts ([`frontend/src/domain/reader/injection.js`](frontend/src/domain/reader/injection.js)) |
+| An altered receipt total | The line items must add up to the printed total |
+| Payout to an attacker | Money only goes to the wallet saved on the member's account, never to an address read from a receipt. The recipient check flags a mismatch ([`RecipientCheck.jsx`](frontend/src/components/RecipientCheck.jsx)) |
+| A compromised laptop or browser | The Ledger's own screen shows the real amount and recipient; a mismatch means reject on the device |
+| Approving one claim and paying another | Approval is bound to one exact claim version; the per-claim cap is enforced again at signing (`MAX_CLAIM_GBP`) |
+| Paying twice | Signing is idempotent, and an uncertain payment is reconciled on-chain before any retry |
+| Fake committee members | Verified university email, a Union-record match in your own name, least-privilege roles, and a full audit log |
+| A leaked agent API key | Optionally sealed with Ledger Key Ring, so it never sits in plain `.env` |
+
 ## How a claim flows
 
 1. **A member submits** a receipt and confirms every field.
@@ -168,7 +225,6 @@ The rows below were rewritten for the agent-decides flow on 2026-10-12. The clai
 ### Known gaps
 
 - **Society setup is out of date.** It still asks each society for its own treasury wallet and a paired Ledger. In the current flow only the Union has a wallet and a Ledger.
-- **Landing-page and "How it works" copy** has not been re-read against the new flow.
 - **The agent needs the backend.** On GitHub Pages the seven checks alone decide.
 - **Hybrid trusts the browser for the payment details.** The amount and recipient are sent from the browser's mock store to the backend, so the Ledger screen is the real check on them.
 - **Ledger Key Ring runs on Ledger's staging service with an emulated device**, not production. It keeps the LLM key out of `backend/.env`; setup is in [`backend/README.md`](backend/README.md) and is optional for other developers.
