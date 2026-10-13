@@ -31,18 +31,18 @@ function Boundary() {
           <h3>The agent, on its own</h3>
           <ol>
             <li>Reads the receipt and fills in the claim for the member to check</li>
-            <li>Decides the claim: seven plain-code checks, then its own judgement of whether this society should be paying for it</li>
-            <li>Drafts the payment to the member's saved wallet, never to an address found on a receipt</li>
-            <li>Cannot send it. It holds no wallet key, and a member can appeal its decision to their society treasurer</li>
+            <li>Runs eight checks on every claim: receipt total, duplicates, budget, category, date, limit, tampering, and whether it's a reasonable expense</li>
+            <li>Declines a claim with a plain reason. The member fixes it or appeals to their society treasurer</li>
+            <li>Approves claims that pass and drafts the payment to the member's saved wallet, never an address from a receipt. It has no payment tools and never sees a wallet key</li>
           </ol>
         </div>
         <div>
-          <h3>Only the Union treasurer, on a Ledger</h3>
+          <h3>Only a person</h3>
           <ol>
-            <li>Releases the money. No one else can, and no software can do it for them</li>
-            <li>Sees the real amount, recipient and network on the device's own screen</li>
-            <li>Checks that the recipient is the member's saved wallet, and how long it has been theirs</li>
-            <li>Signs or rejects on the device. If the agent was tricked, this is where it stops</li>
+            <li>The society treasurer decides appeals: approve, request edits or deny</li>
+            <li>The Union treasurer sees the real amount, recipient and network on the Ledger's own screen</li>
+            <li>They check that the recipient is the member's saved wallet, and how long it has been theirs</li>
+            <li>They sign or reject on the device. Nothing moves without it, so a tricked agent stops here</li>
           </ol>
         </div>
       </div>
@@ -51,7 +51,8 @@ function Boundary() {
 }
 
 const HERO_POINTS = [
-  ['Snap the receipt', 'An AI fills in your claim in seconds. You check it and submit.'],
+  ['Snap the receipt', 'Your phone reads it and fills in the claim. You check it and submit.'],
+  ['Checked in seconds', 'An agent checks it against your society’s rules and tells you exactly why if it can’t pass.'],
   ['Paid in minutes', 'USDC goes straight to the wallet on your account. No forms, no week-long wait.'],
   ['Secured by hardware', 'The AI can’t pay anyone. Only the Union treasurer’s Ledger can release money.'],
 ]

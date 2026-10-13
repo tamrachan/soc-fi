@@ -80,6 +80,8 @@ npm run speculos       # emulated Ledger (needs Docker); screen and buttons at h
 npm run dev            # API on http://localhost:3000
 ```
 
+On Windows use `Copy-Item .env.example .env` and `npm run speculos:win` (a PowerShell copy of `scripts/speculos.sh`). The [root README](../README.md#on-windows-powershell) has the full Windows command list.
+
 `.env` (git-ignored):
 
 | Variable | What it does |

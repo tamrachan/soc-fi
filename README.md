@@ -45,8 +45,46 @@ Needs Docker (for the Ledger emulator) and three terminals. Details, environment
 cd backend && npm install && cp .env.example .env    # then set LLM_API_KEY (and SPECULOS_SEED)
 npm run speculos                                     # 1. emulated Ledger
 npm run dev                                          # 2. API on http://localhost:3000
-cd ../frontend && VITE_DATA_SOURCE=hybrid npm run dev   # 3. the app
+cd ../frontend && npm run dev:hybrid                    # 3. the app (same as VITE_DATA_SOURCE=hybrid npm run dev)
 ```
+
+#### On Windows (PowerShell)
+
+Windows PowerShell 5.1 has no `&&`, `cp` or inline `VAR=value`. `npm run speculos` also runs a shell script that Windows can't execute. Use these instead, one terminal each:
+
+```powershell
+# One-time setup
+cd backend
+npm install
+Copy-Item .env.example .env          # then edit .env: LLM_API_KEY, and your own SPECULOS_SEED
+cd ..\frontend
+npm install
+
+# Terminal 1: emulated Ledger (needs Docker Desktop running)
+cd backend
+npm run speculos:win
+
+# Terminal 2: API on http://localhost:3000
+cd backend
+npm run dev
+
+# Terminal 3: the app in hybrid mode (works on every OS)
+cd frontend
+npm run dev:hybrid
+```
+
+Other commands from the docs, translated:
+
+| macOS / Linux | Windows PowerShell |
+|---|---|
+| `a && b` | `a; if ($?) { b }`, or put them on separate lines |
+| `cp .env.example .env` | `Copy-Item .env.example .env` |
+| `VITE_DATA_SOURCE=hybrid npm run dev` | `npm run dev:hybrid`, or `$env:VITE_DATA_SOURCE='hybrid'; npm run dev` |
+| `ETH_APP_ELF=/path/app.elf npm run speculos` | `$env:ETH_APP_ELF='C:\path\app.elf'; npm run speculos:win` |
+| `curl localhost:3000/api/treasurer/wallet` | `Invoke-RestMethod http://localhost:3000/api/treasurer/wallet` (or `curl.exe …`) |
+| `curl -X POST … -H 'Content-Type: application/json' -d '{…}'` | `Invoke-RestMethod -Method Post http://localhost:3000/… -ContentType 'application/json' -Body '{…}'` |
+
+`$env:NAME='value'` lasts until you close that terminal. PowerShell 7 (`pwsh`) does support `&&`.
 
 Then:
 

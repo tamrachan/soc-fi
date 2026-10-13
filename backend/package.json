@@ -6,6 +6,7 @@
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "speculos": "./scripts/speculos.sh",
+    "speculos:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/speculos.ps1",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [],
