@@ -1,5 +1,7 @@
 # Society Reimbursement — User Flows
 
+> **Historical document.** Kept as a record of the first user flows, written on 10 October 2026. Onboarding (section 0) is still accurate. The claim review flow (sections 1 to 4) was replaced: the agent now decides, and a society treasurer only hears appeals. It does not describe the app as built: see the [README](../../README.md) for the current flow.
+
 This document describes the MVP flows for onboarding students and society committee members, enabling societies for reimbursement, and submitting and reviewing reimbursement claims.
 
 For the MVP, assume the Students’ Association / Union already maintains a directory of societies and a committee database. Seed the application with **mock society and committee records** that represent these existing sources. The application should match against those records rather than asking Union staff to recreate societies or committee roles manually.

@@ -1,4 +1,4 @@
-// Deterministic claim checks (CONTEXT.md step 3). Plain code, no AI.
+// Deterministic claim checks. Plain code, no AI.
 // The server must run the same checks and treat its own result as authoritative;
 // this copy exists so the mock API and the UI can show identical results.
 //

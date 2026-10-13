@@ -1,4 +1,4 @@
-// Shared enums. Keep in sync with HANDOVER.md — the backend uses the same string values.
+// Shared enums. Keep in sync with docs/HANDOVER.md — the backend uses the same string values.
 import { AGENT_NAME } from '../config.js'
 
 export const CLAIM_STATUS = {
@@ -96,7 +96,7 @@ export const CATEGORIES = {
 
 export const CURRENCIES = ['GBP', 'EUR', 'USD']
 
-// Seven deterministic checks run by plain code after the AI read (CONTEXT.md step 3), then the agent's own judgement.
+// Seven deterministic checks run by plain code after the AI read, then the agent's own judgement.
 export const CHECKS = [
   { id: 'amount_matches', label: 'Claimed amount is covered by the receipt' },
   { id: 'not_duplicate', label: 'Not a duplicate of another claim' },

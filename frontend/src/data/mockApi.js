@@ -1,4 +1,4 @@
-// In-browser implementation of the API contract (HANDOVER.md §4), persisted to localStorage.
+// In-browser implementation of the API contract (docs/HANDOVER.md §4), persisted to localStorage.
 // It enforces the same rules the backend must enforce, so the demo behaves like production.
 import societiesSeed from './mock/societies.json'
 import committeeSeed from './mock/committeeRecords.json'

@@ -1,5 +1,7 @@
 # 🛠️ N3XT Hackathon @ OP3N 2026
 
+> The organisers' brief for the N3XT Hackathon @ OP3N 2026, copied here for reference. Not written by us.
+
 Build before you land. Pitch live in Paris.
 
 Your seat comes with a hackathon. It's a **1-week remote build** the week before OP3N, with **live finals at Ledger HQ on Friday 16 October**. Every club fields one team — this is where you show what you can ship. **€5,000 cash prize for the top 3 winners**

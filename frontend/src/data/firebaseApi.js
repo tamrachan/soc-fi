@@ -1,5 +1,5 @@
 // Firebase implementation of the API contract — TO BE COMPLETED BY BACKEND.
-// Every method must return the same shapes as mockApi.js (see HANDOVER.md §4).
+// Every method must return the same shapes as mockApi.js (see docs/HANDOVER.md §4).
 // Reads can go straight to Firestore (guarded by security rules); every write that changes
 // claim status, permissions or payments must go through a Cloud Function, never a client write.
 // Firebase is loaded lazily so the mock demo build doesn't initialise it.

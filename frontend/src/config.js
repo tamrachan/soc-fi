@@ -17,7 +17,7 @@ export const DATA_SOURCE = import.meta.env.VITE_DATA_SOURCE || 'mock'
 export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
 
 // Mock FX quote: 1 unit of claim currency -> USDC. The backend should quote and store
-// the rate on the payment record at approval time (see HANDOVER.md).
+// the rate on the payment record at approval time (see docs/HANDOVER.md).
 export const FX_TO_USDC = { GBP: 1.27, EUR: 1.08, USD: 1 }
 
 // The Union's wallet: the only one that pays. Shown as the payment's source; the real one is

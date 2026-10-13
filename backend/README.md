@@ -1,77 +1,25 @@
-# Backend: the agent and the Ledger (N3XT Hackathon @ OP3N 2026)
+# Backend: the agent and the Ledger
 
-This folder is the Express API that gives the SocFi frontend its two real parts: the LLM agent that judges claims, and the Ledger signing and payout. The project overview, the claim flow and the demo script are in the [root README](../README.md). This file covers the hackathon brief, how to run and configure the backend, its API, and what we learned.
+This folder is the Express API that gives the SocFi app its real parts: the LLM agent that judges claims (Kevin), the Ledger signing and USDC payout, and Ledger Key Ring for the agent's API key. The project overview is in the [root README](../README.md); a step-by-step setup for the whole app is in [docs/RUNNING.md](../docs/RUNNING.md).
 
-## Hackathon
+The frontend keeps all claim data in the browser. Run with `npm run dev:hybrid`, it calls this backend for two things only: the agent's verdict when a claim is submitted, and the Ledger signature when the Union treasurer pays.
 
-- **Challenge:** build an AI agent / AI-powered product using the Ledger Agent Stack, a Ledger signer, and/or Key Ring. One unified challenge, no tracks. Any AI model or provider.
-- **Dates (CEST):** kickoff Oct 7 15:00 · **submissions close Oct 13 23:59** · review Oct 14–15 · finalists announced Oct 15 · live pitch Oct 16 15:00 at Ledger HQ, Paris.
-- **Submission (all three required):** the form (https://forms.gle/TcmwuFQMGfyEcuNd6, edit rather than resubmit) · a post on X or LinkedIn from the club account with #LedgerN3XTCollab tagging @Ledger · GitHub repo link + short demo video.
-- **Also required:** a blunt developer-experience write-up (where docs lost us, confusing workflows, missing context, one concrete suggestion). Running notes are at the bottom of this file.
-- **Pre-existing code** must be disclosed (anything from before Oct 7), or the team is disqualified.
-- **Pitch:** 5 min presentation + 5 min questions, two presenters, both in the room.
-- **Jury:** Ian Rogers (Chief Human Agency Officer, Ledger), Guillaume Mathias (VP Product, Ledger), Joshua Mo (DevRel Lead, Venice), Drake Breeding (Director, Ecosystem Arc, Circle).
-- **Prizes:** €2,500 / €1,500 / €1,000.
+## Layout
 
-### Scoring
-
-| Criterion | Weight |
+| File | What it does |
 | --- | --- |
-| Technical execution | 25% |
-| Usefulness and relevance for Ledger | 20% |
-| Innovation / originality | 20% |
-| User experience | 15% |
-| New use cases possible for Ledger | 10% |
-| Clarity, presentation and documentation | 10% |
+| `src/index.ts` | Routes |
+| `src/agent.ts` | The agent: the prompt, the LLM call, and the limits enforced in code |
+| `src/ledger.ts` | Device Management Kit and Ethereum Signer Kit, connected to the emulator |
+| `src/payout.ts` | Drafts the USDC transfer, has it signed, broadcasts it |
+| `src/secrets.ts` | Decrypts secrets sealed with Ledger Key Ring at start |
+| `scripts/keyring.cjs` | The Key Ring commands (`npm run keyring -- …`) |
+| `scripts/speculos.sh`, `scripts/speculos.ps1` | Start the emulated Ledger |
+| `speculos/*.elf` | The Ledger apps the emulator runs (see [Decisions](#decisions)) |
+| `src/config.ts` | Settings read from `.env` |
+| `src/store.ts` | An earlier claim store, used only by the `/api/expenses` routes |
 
-What they say they like: real user value over a generic demo; an explicitly named boundary between what the agent does on its own and what a human approves; a Ledger primitive actually implemented; a demonstration that device-backed trust matters; runnable code or a recorded walkthrough.
-
-### Ledger docs
-
-- Overview: https://developers.ledger.com/docs/ai-tools/overview
-- Ledger CLI / Agent Stack: https://developers.ledger.com/docs/ai-tools/ledger-cli (Key Ring: `#key-ring`)
-- DMK Skills: https://developers.ledger.com/docs/ai-tools/ledger-dmk-skills
-- Signer: https://developers.ledger.com/docs/device-interaction/dmk-ts/integration/how_to/how_to_use_a_signer
-- DMK integration: https://developers.ledger.com/docs/device-interaction/dmk-ts/integration/how_to/dmk
-- Clear Signing: https://developers.ledger.com/docs/clear-signing/overview
-- Walkthrough video (ignore its tracks, prizes and dates): https://www.youtube.com/watch?v=328z0_foOi4
-
-## Product
-
-A university society expense handler. The students' union holds funds in a Ledger wallet; committee members claim expenses back in stablecoin.
-
-1. The union holds a Ledger wallet.
-2. A committee member uploads a receipt and gives their crypto address.
-3. An AI model reads the receipt.
-4. The agent decides whether the claim is valid for that society.
-5. If the agent approves, the payment goes straight to the union treasurer. No society treasurer reviews it.
-6. If the agent declines, the member can fix and resubmit, or appeal. An appeal is the only time a society treasurer is involved: they uphold or deny it.
-7. The union treasurer, the only person with a Ledger, checks that the amount and recipient on the device match the claim and signs. The money goes to the member's wallet.
-
-**The boundary (name this in the pitch):** the agent reads the receipt, decides validity on its own, and drafts the transfer. It cannot move money. Only the treasurer's confirmation on the device, where the amount, recipient and network are shown in clear, authorises a payout. The treasurer is a check against malicious transfers, not a second auditor.
-
-## Team split
-
-- Frontend: React, in `../frontend`. It keeps all claim data in the browser (mock) and calls this backend for the agent's verdict and the Ledger signature when run with `VITE_DATA_SOURCE=hybrid`.
-- Backend and Ledger integration: this folder.
-
-## Decisions
-
-- **TypeScript on Node, Express.** Ledger's DMK is TypeScript, and types can be shared with the React frontend.
-- **USDC on Base Sepolia** (`0x036CbD53842c5426634e7929541eC2318f3dCF7e`). The emulated device clear-signs it ("Amount 32.5 ttUSDC · Network Base Sepolia"). tGBP was not tried.
-- **GBP to USDC** uses a fixed placeholder rate (`USDC_PER_GBP`, default 1.27, matching the frontend mock), not a live feed.
-- **No physical Ledger:** we use the Speculos emulator (Nano S Plus). The app binary is bundled at `speculos/ethereum-nanosp.elf`: it is Ledger's Ethereum app v1.22.5, built from [LedgerHQ/app-ethereum](https://github.com/LedgerHQ/app-ethereum) for the Nano S Plus. `ETH_APP_ELF=/path/to/app.elf npm run speculos` uses a different build.
-- **The DMK runs in the backend** and talks to Speculos over HTTP. With a real device it would have to move to the treasurer's browser (WebHID); the backend would then only draft the unsigned transaction and broadcast the signed one.
-- **LLM:** OpenAI SDK, with base URL and model configurable, so any OpenAI-compatible provider works.
-- **Hard limits in code**, applied whatever the model says: per-claim cap (`MAX_CLAIM_GBP`), claimed amount may not exceed the receipt total. The cap is applied again at signing, in USDC.
-- **Hybrid, not Firebase.** The frontend was designed for a Firebase backend of about 35 methods. We did not build it. The frontend keeps its mock data layer and only the agent and the Ledger are real.
-- **Our own seed for the emulator.** The treasury address comes from `SPECULOS_SEED` in `.env`, not from Speculos' public default seed.
-
-## Current state
-
-Layout: `src/config.ts` (env), `src/secrets.ts` (Key Ring decryption at start), `scripts/keyring.cjs` (Key Ring commands), `src/agent.ts` (audit), `src/ledger.ts` (DMK + Ethereum signer), `src/payout.ts` (USDC transfer drafting and broadcast), `src/store.ts` (claims, persisted to `data/expenses.json`), `src/index.ts` (routes).
-
-### Running it
+## Running it
 
 ```sh
 npm install
@@ -80,21 +28,32 @@ npm run speculos       # emulated Ledger (needs Docker); screen and buttons at h
 npm run dev            # API on http://localhost:3000
 ```
 
-On Windows use `Copy-Item .env.example .env` and `npm run speculos:win` (a PowerShell copy of `scripts/speculos.sh`). The [root README](../README.md#on-windows-powershell) has the full Windows command list.
+On Windows use `Copy-Item .env.example .env` and `npm run speculos:win`. [docs/RUNNING.md](../docs/RUNNING.md#on-windows-powershell) has the full Windows command list.
 
-`.env` (git-ignored):
+### Configuration
+
+`.env` is git-ignored.
 
 | Variable | What it does |
 | --- | --- |
-| `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` | The agent's model. Any OpenAI-compatible provider. Tested with Gemini (`gemini-3.1-flash-lite` through Google's OpenAI-compatible URL). Without a key the agent declines everything. The key can be sealed with Ledger Key Ring instead of sitting here, see below. |
-| `SPECULOS_SEED` | 24 words. The emulated Ledger's seed, which decides the treasury address. `npm run speculos` reads it. Unset means Speculos' public default seed. Testnet funds only. |
-| `BROADCAST` | `false` stops after signing, so no funds are needed; the returned hash is real but never reaches the chain. Default `true`. |
-| `MAX_CLAIM_GBP`, `USDC_PER_GBP` | Per-claim cap (default 100) and the fixed GBP to USDC rate (default 1.27). |
+| `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` | The agent's model. Any OpenAI-compatible provider works. Tested with Gemini (`gemini-3.1-flash-lite` through Google's OpenAI-compatible URL). Without a key the agent declines every claim. The key can be sealed with Ledger Key Ring instead of sitting here, see below. |
+| `SPECULOS_SEED` | 24 words. The emulated Ledger's seed, which decides the Union wallet's address. `npm run speculos` reads it. If unset, Speculos uses its default seed, which is public. Testnet funds only. |
+| `BROADCAST` | `false` stops after signing, so no funds are needed. The returned hash is the one the transaction would have had; it never reaches the chain. Default `true`. |
+| `MAX_CLAIM_GBP`, `USDC_PER_GBP` | The per-claim cap (default 100) and the fixed GBP to USDC rate (default 1.27). |
 | `SPECULOS_URL`, `RPC_URL`, `PORT` | Defaults: `http://127.0.0.1:5001`, `https://sepolia.base.org`, `3000`. |
+| `KEYRING_API`, `KEYRING_APPLICATION_ID`, `SYNC_SPECULOS_PORT` | Key Ring settings. Defaults: Ledger's staging service, application 17, port 5002. |
 
-### The agent's key in Ledger Key Ring
+### The Union wallet and funding it
 
-The LLM API key does not have to sit in `.env`. It can be sealed: encrypted into `secrets.enc` with a key held in a Ledger Key Ring. The ring is created from the Ledger's seed, and a machine can only join it after an approval on the device. At start the backend fetches the key from Ledger's Key Ring service (no device needed) and decrypts `secrets.enc` in memory. This is optional: with a plain `LLM_API_KEY` in `.env` everything works as before.
+- The seed phrase is the wallet's master secret. The Union wallet is the first Ethereum address derived from it (path `44'/60'/0'/0/0`). A physical Ledger keeps the seed inside the device; it is in `.env` here only because the emulator has to be told which seed to hold. The backend never sees a private key: it hands the device a transaction and gets a signature back.
+- `curl localhost:3000/api/treasurer/wallet` shows the address and its ETH and USDC balances.
+- It needs Base Sepolia ETH for fees (about 0.0000007 ETH per payout) and test USDC to pay out. Both are free: USDC from faucet.circle.com (choose Base Sepolia), ETH from the Coinbase Developer Platform faucet (needs a free sign-in). Alchemy's faucet wants a mainnet balance.
+- Faucets give roughly 10 to 20 USDC a day, so keep real payouts small.
+- Each developer's `.env` has its own seed, so each has a different Union wallet unless the seed is shared.
+
+## The agent's key in Ledger Key Ring
+
+The LLM API key does not have to sit in `.env`. It can be sealed: encrypted into `secrets.enc` with a key held in a Ledger Key Ring. The ring is created from the Ledger's seed, and a machine can only join it after an approval on the device. At start the backend fetches the ring's key from Ledger's Key Ring service (no device needed) and decrypts `secrets.enc` in memory. This is optional: with a plain `LLM_API_KEY` in `.env` everything works as before.
 
 One-time setup, per machine:
 
@@ -107,97 +66,98 @@ npm run keyring -- seal      # moves LLM_API_KEY from .env into secrets.enc
 After that the second emulator can be stopped (`docker stop speculos-sync`). `npm run dev` prints "Secrets decrypted with Ledger Key Ring", and `curl localhost:3000/api/status` shows `"agentKey": "keyring"`.
 
 - `npm run keyring -- status` shows what is sealed. `npm run keyring -- unseal` puts the key back into `.env` and deletes `secrets.enc`.
-- **If the key is also set in plain `.env`, the plain one wins.** That is the fallback if Ledger's service cannot be reached: without either, the agent declines every claim.
-- **Keep a copy of the API key somewhere else** (a password manager). If the service is down or the ring is reset, `secrets.enc` cannot be opened.
-- `data/keyring.json` holds this machine's membership key (file mode 600, git-ignored). It is now the thing to protect: whoever has it and `secrets.enc` can decrypt. The ring's encryption key itself is never written to disk.
+- **If the key is also set in plain `.env`, the plain one wins.** That is the fallback if Ledger's service cannot be reached. With neither, the agent declines every claim.
+- **Keep a copy of the API key somewhere else**, such as a password manager. If the service is down or the ring is reset, `secrets.enc` cannot be opened.
 - `secrets.enc` and `data/` are git-ignored, so each developer seals their own key.
 
-What this is and is not:
+What this does and does not protect:
 
-- It runs against **Ledger's staging Key Ring service**, with an **emulated** device. The emulated Ledger Sync app signs with a public test key, so production is not expected to accept it; we did not try.
-- The Ledger Sync binary is bundled at `speculos/ledger-sync-nanosp.elf`: Ledger Sync v1.4.2, built from [LedgerHQ/app-ledger-sync](https://github.com/LedgerHQ/app-ledger-sync) for the Nano S Plus.
-- The code is `scripts/keyring.cjs` (the commands) and `src/secrets.ts` (decrypting at start). It uses Ledger Live's library `@ledgerhq/ledger-key-ring-protocol`, not the official `wallet-cli ring`, which needs a physical device over USB.
+- **It protects the key from being committed, pasted or copied to a machine nobody approved.** The encrypted file is useless without ring membership, and membership needs the device.
+- **It does not protect against someone who has this machine's disk.** `data/keyring.json` holds this machine's membership key (file mode 600) next to `secrets.enc`; whoever has both can decrypt. The ring's own key is never written to disk.
+- **It does not protect a running backend.** Once decrypted, the key is in memory like any other.
+- It runs against **Ledger's staging Key Ring service** with an **emulated** device. The emulated Ledger Sync app signs with a public test key, so production is not expected to accept it; we did not try.
+- It uses Ledger Live's library `@ledgerhq/ledger-key-ring-protocol`, not the official `wallet-cli ring`, which needs a physical device over USB.
 
-### The treasury wallet and funding it
+## API
 
-- The seed phrase is the wallet's master secret; the treasury address is the first Ethereum address derived from it (path `44'/60'/0'/0/0`). A physical Ledger keeps the seed inside the device. It is in `.env` only because the emulator has to be told which seed to hold. The backend never sees a private key: it hands the device a transaction and gets a signature back.
-- `curl localhost:3000/api/treasurer/wallet` shows the address and its ETH and USDC balances.
-- It needs Base Sepolia ETH for fees (about 0.0000007 ETH per payout) and test USDC to pay out. Both are free: USDC from faucet.circle.com (choose Base Sepolia), ETH from the Coinbase Developer Platform faucet (needs a free sign-in). Alchemy's faucet wants a mainnet balance.
-- Faucets give roughly 10 to 20 USDC a day, so keep real payouts small. A transfer larger than the balance is mined and reverts; `broadcast` reports that as an error.
-- Each developer's `.env` has its own seed, so each has a different treasury address unless the seed is shared.
+The frontend uses the last three rows. The `/api/expenses` routes are this backend's own earlier claim store. The frontend does not call them; they still work and are handy for testing with curl.
 
-### With the frontend
-
-The React app stays on its mock data; two steps are real: the agent's verdict when a claim is submitted, and the Ledger signature. With the emulator and API running:
-
-```sh
-cd ../frontend && VITE_DATA_SOURCE=hybrid npm run dev
-```
-
-Submitting a claim calls `POST /api/agent/audit`; if this backend is not running, the submit fails. In the "Viewing as" switcher, the Union treasurer (Robin Calder) is the only persona who can sign: Payments, open a claim, "Open Ledger prompt" sends the transfer to the emulated device. The modal mirrors its screen and buttons; signing or rejecting there decides the payment. The amount and recipient come from the browser's mock store, so the device screen is the only real check on them.
-
-### API
-
-The frontend uses only the last four rows. The `/api/expenses` routes are this backend's own earlier claim store, which the frontend does not call; they still work and are handy for testing with curl.
-
-| Route | Who | What |
+| Route | Used by | What it does |
 | --- | --- | --- |
-| `POST /api/expenses` | member | Body: `society`, `memberEmail`, `memberWallet`, `description`, `amountGbp`, and `receiptText` and/or `receiptImage` (data URL). Audited immediately; returns the claim with `audit` and `status`. |
-| `GET /api/expenses?memberEmail=` | member | List claims. |
-| `GET /api/expenses/:id` | both | One claim. |
-| `POST /api/expenses/:id/override` | member | Body: `reason`. Only for `agent_rejected`; moves it to the treasurer. |
-| `GET /api/treasurer/queue` | treasurer | Claims awaiting a decision, with flags and USDC amount. |
+| `POST /api/expenses` | curl | Body: `society`, `memberEmail`, `memberWallet`, `description`, `amountGbp`, and `receiptText` and/or `receiptImage` (data URL). Audited at once; returns the claim with `audit` and `status`. |
+| `GET /api/expenses?memberEmail=`, `GET /api/expenses/:id` | curl | List claims, or fetch one. |
+| `POST /api/expenses/:id/override` | curl | Body: `reason`. Only for `agent_rejected`; moves the claim to the treasurer. |
+| `GET /api/treasurer/queue` | curl | Claims awaiting a decision, with flags and the USDC amount. |
+| `POST /api/expenses/:id/reject` | curl | Body: `note`. |
+| `POST /api/expenses/:id/pay` | curl | Drafts the transfer and waits for the device. 403 if rejected on the device. |
 | `GET /api/status` | anyone | Which model the agent uses, where its key came from (`keyring`, `env` or `none`), the Key Ring id, and whether payouts are broadcast. |
-| `GET /api/treasurer/wallet` | treasurer | Treasury address (read from the device) and ETH / USDC balances. |
-| `POST /api/expenses/:id/reject` | treasurer | Body: `note`. |
-| `POST /api/expenses/:id/pay` | treasurer | Drafts the transfer and waits for the device. Stays open until the treasurer confirms or rejects. 403 if rejected on the device. |
-| `POST /api/agent/audit` | frontend (hybrid) | Body: `society` (name, category, policy, budget), `claim` (merchant, date, amount, currency, category, description), `receiptText` and/or `receiptImage`. Returns the agent's verdict (`decision`, `reason`, `flags`). |
-| `POST /api/payments/sign` | frontend (hybrid) | Body: `paymentId`, `recipientAddress`, `amountUsdc`. Drafts the transfer, waits for the device, broadcasts. Returns `{ txHash, broadcast }`. 403 if rejected on the device; a repeated request returns the first result instead of paying twice (kept in memory only). |
-| `GET /api/device/screenshot`, `POST /api/device/button/{left,right,both}` | frontend (hybrid) | The emulator's screen and buttons, shown in the signing modal. |
+| `GET /api/treasurer/wallet` | anyone | The Union wallet's address (read from the device) and its ETH and USDC balances. |
+| `POST /api/agent/audit` | frontend | Body: `society` (name, category, policy, budget), `claim` (merchant, date, amount, currency, category, description), and `receiptText` and/or `receiptImage`. Returns the agent's verdict: `decision`, `reason`, `flags`. |
+| `POST /api/payments/sign` | frontend | Body: `paymentId`, `recipientAddress`, `amountUsdc`. Drafts the transfer, waits for the device, broadcasts. Returns `{ txHash, broadcast }`. 403 if rejected on the device. A repeated request returns the first result instead of paying twice. |
+| `GET /api/device/screenshot`, `POST /api/device/button/{left,right,both}` | frontend | The emulator's screen and buttons, shown in the app's signing screen. |
 
 Statuses of the backend's own claims (not the frontend's): `agent_approved`, `agent_rejected`, `overridden`, `signing`, `signed`, `paid`, `treasurer_rejected`.
 
-### Verified
+### Testing with curl
 
-- DMK connects to Speculos from Node and reads the treasury address.
-- Signing: the device shows the USDC amount, recipient and network in clear; confirming returns a signed transaction, rejecting returns 403.
-- **A real payout** (2026-10-12): a claim submitted in the frontend, approved by the agent, signed on the emulated device and paid in USDC on Base Sepolia.
-- **The LLM agent**, with a Gemini key: it approves and declines with reasons, and uses the society context (it declined baking ingredients claimed as a "team dinner" for the Blockchain Society).
-- `POST /api/payments/sign`: sign, reject (403), a repeated request returning the first result, and the per-claim cap.
+```sh
+# The agent's verdict on a claim
+curl -s -X POST localhost:3000/api/agent/audit -H 'Content-Type: application/json' -d '{
+  "society": {"name": "Chess Society", "category": "Games"},
+  "claim": {"merchant": "Argos", "date": "2026-10-08", "amount": 25, "currency": "GBP",
+            "category": "equipment", "description": "Two chess clocks for weekly meetings"},
+  "receiptText": "Argos, 08/10/2026. 2x DGT chess clock. Total 25.00 GBP"
+}'
+
+# Sign a payment. This stays open until the device is used.
+curl -s -X POST localhost:3000/api/payments/sign -H 'Content-Type: application/json' -d '{
+  "paymentId": "test-1", "recipientAddress": "0x17f2348121a79F7553959846BA6375F02faA8047", "amountUsdc": 1
+}'
+```
+
+For the second command, open http://127.0.0.1:5001, press the right button through the screens, and press both buttons on "Sign transaction" (or on "Reject transaction", one screen further).
+
+## Decisions
+
+- **TypeScript on Node, with Express.** Ledger's DMK is TypeScript.
+- **USDC on Base Sepolia** (`0x036CbD53842c5426634e7929541eC2318f3dCF7e`). The emulated device clear-signs it: it shows the token amount, the recipient and "Base Sepolia".
+- **GBP to USDC** uses a fixed placeholder rate (`USDC_PER_GBP`), not a live feed.
+- **No physical Ledger.** We use the Speculos emulator as a Nano S Plus. Two app binaries are bundled in `speculos/`: Ledger's Ethereum app v1.22.5, built from [LedgerHQ/app-ethereum](https://github.com/LedgerHQ/app-ethereum), and Ledger Sync v1.4.2, built from [LedgerHQ/app-ledger-sync](https://github.com/LedgerHQ/app-ledger-sync). `ETH_APP_ELF=/path/to/app.elf npm run speculos` uses a different Ethereum build.
+- **The DMK runs in the backend** and talks to Speculos over HTTP. With a real device it would move to the treasurer's browser (WebHID); the backend would then only draft the unsigned transaction and broadcast the signed one.
+- **LLM through the OpenAI SDK**, with the base URL and model configurable, so any OpenAI-compatible provider works.
+- **Hard limits in code**, applied whatever the model says: the per-claim cap, and the claimed amount may not exceed the receipt total. The cap is applied again at signing, in USDC.
+- **Hybrid, not Firebase.** The frontend was designed for a Firebase backend of about 35 methods. We did not build it. The frontend keeps its mock data layer, and only the agent and the Ledger are real.
+- **Our own seed for the emulator**, not Speculos' public default.
+
+## What has been verified
+
+- The DMK connects to Speculos from Node and reads the Union wallet's address.
+- Signing: the device shows the USDC amount, recipient and network in clear. Confirming returns a signed transaction; rejecting returns 403.
+- **Real payouts** (first on 2026-10-12): a claim submitted in the frontend, approved by the agent, signed on the emulated device and paid in USDC on Base Sepolia.
+- **The LLM agent**, with a Gemini key: it approves and declines with reasons and uses the society context. It declined baking ingredients claimed as a "team dinner" for the Blockchain Society, and a lunch receipt photo that included beer.
+- `POST /api/payments/sign`: sign, reject (403), a repeated request returning the first result, the per-claim cap, and recipient addresses in any letter case.
 - The backend reconnects on its own after the emulator is restarted.
 - **Ledger Key Ring** (2026-10-13): joining the ring with an approval on the emulated device, sealing and unsealing, and a fresh backend start that decrypted the LLM key and ran the agent with it, with no device running.
-- The frontend's claim, appeal and payment logic, by script. Not every screen has been clicked through.
 
-### Not verified yet
+Not verified: a payout larger than the wallet's USDC balance (expected: mined, reverted, and reported as an error).
 
-- **Receipt images** sent to the agent. Only receipt text has been tried.
-- A payout larger than the wallet's USDC balance (expected: mined, reverted, reported as an error).
+Not built:
 
-### Not built
-
-- Accounts / auth. Routes are open and members are identified by the email in the request body.
-- Treasurer email on override. `notifyTreasurer` in `src/index.ts` only logs.
-- Key Ring on Ledger's production service or with a physical device (we use staging and the emulator).
-- Persistence for `POST /api/payments/sign`. Its record of sent payments is in memory, so the double-pay guard resets when the backend restarts.
+- Accounts or authentication. Routes are open.
+- Checking a payment against a stored, approved claim. The amount and recipient come from the browser; the device screen is the check on them.
+- Persistence for `POST /api/payments/sign`. Its record of sent payments is in memory, so the double-payment guard resets when the backend restarts.
+- Key Ring on Ledger's production service or with a physical device.
 
 ## Gotchas
 
 - **Port 5000 is taken on macOS** by AirPlay Receiver, so Speculos' API is mapped to 5001.
 - **Speculos needs `--pki-prod`.** Without it the device rejects Ledger's token metadata (`ProvidePkiCertificateCommandError 5720`), falls back to blind signing, and fails with `6a80 Invalid data` because blind signing is off.
 - **The Speculos transport is HTTP, not the APDU TCP port.** `speculosTransportFactory(url)` takes the REST API URL. Its device model defaults to Stax; we pass `DeviceModelId.NANO_SP`.
-- **The Ethereum signer is a separate package**, `@ledgerhq/device-signer-kit-ethereum`. There is no `LedgerDeviceManagementKit` class; it is `DeviceManagementKitBuilder`.
-- **The default Speculos seed is public.** Its first address (`0xDad77910DbDFdE764fC21FCD4E74D71bBACA6D8D`) already has other people's transactions on Base Sepolia. Put your own 24 words in `.env` as `SPECULOS_SEED`; `npm run speculos` reads it. `GET /api/treasurer/wallet` then shows the address to fund. Testnet funds only.
+- **The Ethereum signer is a separate package**, `@ledgerhq/device-signer-kit-ethereum`. The DMK entry point is `DeviceManagementKitBuilder`.
+- **The default Speculos seed is public.** Its first address already has other people's transactions on Base Sepolia. Put your own 24 words in `.env` as `SPECULOS_SEED`.
 - **`npm run speculos` replaces the running emulator.** Changing the seed means restarting it; the backend reconnects by itself.
-- **A hash with `BROADCAST=false` will not resolve on the explorer.** It is the hash the transaction would have had.
-- Device buttons can be driven over HTTP: `POST /button/{left,right,both}` with `{"action":"press-and-release"}`; the current screen text is at `GET /events?currentscreenonly=true`.
+- **With the key sealed, every backend start calls Ledger's staging service**, including each automatic restart when a source file is saved.
+- **`tsx` cannot load `@ledgerhq/ledger-key-ring-protocol`**, so the Key Ring code is plain CommonJS run by `node` in a child process.
+- Device buttons can be driven over HTTP: `POST /button/{left,right,both}` on the Speculos API with `{"action":"press-and-release"}`. The current screen text is at `GET /events?currentscreenonly=true`.
 
-## Developer-experience notes (for the submission write-up)
-
-- Nothing in the Signer docs says Speculos must be started with `--pki-prod` for clear signing; the visible error (`6a80 Invalid data`) points nowhere near the cause.
-- The Speculos transport's constructor arguments (HTTP URL, model defaulting to Stax) had to be read from the type definitions.
-- Speculos' default API port collides with macOS AirPlay.
-- **Key Ring cannot be tried without hardware.** `wallet-cli ring init` needs a physical Ledger over USB with the Ledger Sync app; the CLI has no emulator option, and the docs do not say so. A team working on Speculos can use the signer but not Key Ring. (`ring encrypt` / `decrypt` need no device afterwards, only network, the password and the OS keychain.)
-- **Key Ring does work on the emulator, but not by any documented route** (`scripts/keyring.cjs`). What worked: build [LedgerHQ/app-ledger-sync](https://github.com/LedgerHQ/app-ledger-sync) for the Nano S Plus, run it in Speculos, and use Ledger Live's own library `@ledgerhq/ledger-key-ring-protocol` with `@ledgerhq/hw-transport-node-speculos-http` against Ledger's **staging** trustchain service. It created a key ring, added a second member with a device approval, encrypted and decrypted, and decrypted again with the emulator stopped.
-- **The DMK Key Ring package (`@ledgerhq/device-trusted-app-kit-ledger-keyring-protocol` 0.5.0) cannot create a key ring.** It authenticated the emulated device, then failed with "Ledger Sync must be initialized from Ledger Live with this device". Its README has headings and no content.
-- `tsx` cannot load `@ledgerhq/ledger-key-ring-protocol` (it resolves the package to its TypeScript sources, which mix `require` and ESM); plain `node` with CommonJS works.
-- `npx wallet-cli` without the scope runs an unrelated npm package of the same name; the Ledger one is `@ledgerhq/wallet-cli`.
+Our feedback for Ledger on all of the above is in [docs/SUBMISSION.md](../docs/SUBMISSION.md).

@@ -1,17 +1,20 @@
-# Front-end → Back-end handover
+# Data model and API contract
 
-Living document. The front-end updates it whenever the schema, statuses or API contract change.
-**If you change something here on the backend side, update this file in the same PR.**
+This is the contract between the screens and whatever stores the data: the collections, the claim status machine, the API methods and the rules a server must enforce. It was written as a handover for a Firebase backend that we planned and did not build. Today the working implementation of this contract is [`frontend/src/data/mockApi.js`](../frontend/src/data/mockApi.js), which keeps everything in the browser. The Firestore, Cloud Functions and Storage details below describe how a production backend should do it, not something that exists.
+
+For the parts that are real today (the agent, the Ledger signature and Key Ring), see [backend/README.md](../backend/README.md). "The agent" is called Kevin in the app.
+
+If you change a schema, status or method, update this file in the same change.
 
 | | |
 |---|---|
-| Last updated | 2026-10-12 — the agent decides, appeals, Union treasurer, hybrid backend (see Changelog). **Sections 2 to 6 below still describe the older flow in places; the changelog entry is authoritative where they differ.** |
+| Last updated | 2026-10-13. Sections 1 to 8 describe the current flow: the agent decides, society treasurers hear appeals, and the Union treasurer signs. |
 | Pilot | University of St Andrews · St Andrews Students' Association ("Your Union") · `@st-andrews.ac.uk` |
 | Front-end | `frontend/` — Vite + React (JS), HashRouter, deployed to GitHub Pages in mock mode |
-| Source of truth for enums | [`frontend/src/data/schema.js`](frontend/src/data/schema.js) |
-| Mock implementation of the contract | [`frontend/src/data/mockApi.js`](frontend/src/data/mockApi.js) |
-| Stub you implement | [`frontend/src/data/firebaseApi.js`](frontend/src/data/firebaseApi.js) |
-| Seed data | [`frontend/src/data/mock/*.json`](frontend/src/data/mock/) — can be loaded into the Firestore emulator as-is |
+| Source of truth for enums | [`frontend/src/data/schema.js`](../frontend/src/data/schema.js) |
+| Mock implementation of the contract | [`frontend/src/data/mockApi.js`](../frontend/src/data/mockApi.js) |
+| Stub you implement | [`frontend/src/data/firebaseApi.js`](../frontend/src/data/firebaseApi.js) |
+| Seed data | [`frontend/src/data/mock/*.json`](../frontend/src/data/mock/) — can be loaded into the Firestore emulator as-is |
 
 ---
 
@@ -20,9 +23,10 @@ Living document. The front-end updates it whenever the schema, statuses or API c
 Every page imports `api` from `src/data/api.js` and calls the async methods listed in §4. Nothing else touches Firestore.
 
 - `VITE_DATA_SOURCE=mock` (default) → `mockApi.js`, state saved in the browser's `localStorage`. This is what GitHub Pages serves.
-- `VITE_DATA_SOURCE=firebase` → `firebaseApi.js`. Every method currently throws `unimplemented`.
+- `VITE_DATA_SOURCE=hybrid` → `hybridApi.js`: `mockApi.js` with two methods replaced by calls to `backend/` (`submitClaim` asks the agent first; `confirmOnDevice` signs on the emulated Ledger).
+- `VITE_DATA_SOURCE=firebase` → `firebaseApi.js`. Every method throws `unimplemented`; this is the stub a production backend would fill in.
 
-To go live, implement each method in `firebaseApi.js` so it **returns the same shape as `mockApi.js`**. The UI needs no other changes.
+To build that backend, implement each method in `firebaseApi.js` so it **returns the same shape as `mockApi.js`**. The UI needs no other changes.
 
 - **Reads** can query Firestore directly, guarded by security rules.
 - **Writes** that change claim status, permissions, setup or payments **must go through Cloud Functions**, never direct client writes. The mock enforces the rules the functions must enforce (§5), so read `mockApi.js` as the spec.
@@ -39,9 +43,11 @@ IDs below are the mock's. Use auto-IDs in production, except where a composite I
 
 ### `users/{uid}`, where uid is the Firebase Auth uid
 ```js
-{ id, displayName, email, emailVerified: bool, walletAddress: '0x…' | null, createdAt }
+{ id, displayName, email, emailVerified: bool, walletAddress: '0x…' | null, walletChangedAt?, unionRole?: 'treasurer', createdAt }
 ```
 - `email` must end with `@st-andrews.ac.uk`. The mock uses the St Andrews username format, e.g. `ab123@st-andrews.ac.uk`. Configurable as `UNI_EMAIL_SUFFIX` in `src/config.js`. `emailVerified` comes from Firebase Auth email-link/code verification. **Never trust a client-written value.**
+- `unionRole: 'treasurer'` marks the Union treasurer, the only user who can list, sign, retry or reconcile payments.
+- `walletChangedAt` is set whenever `walletAddress` changes. It feeds the recipient check shown to the Union treasurer.
 - `walletAddress` is the **only** address a reimbursement can be sent to. You can't change it while the user has a claim in `approved | awaiting_ledger | payment_pending | needs_reconciliation`.
 
 ### `societies/{societyId}`, imported from the Union directory
@@ -86,7 +92,7 @@ Permissions are written explicitly, from `ROLE_PERMISSIONS`:
 |---|---|
 | member | `claims.create` |
 | logistics_coordinator | `claims.create`, `claims.view_society` |
-| treasurer | the above + `claims.review`, `claims.approve`, `payments.initiate`, `society.configure_reimbursement`, `members.manage` |
+| treasurer (of a society) | the above + `claims.review`, `claims.approve`, `society.configure_reimbursement`, `members.manage`. `claims.review` and `claims.approve` apply to appeals only. A society treasurer cannot pay |
 
 Consider mirroring permissions into custom claims, or reading memberships in security rules.
 
@@ -110,6 +116,7 @@ Only `matched` grants permissions.
   approvedVersion: number | null,
   paymentId: string | null,
   supersedesClaimId: string | null,   // set when member "started a new claim" after a return
+  appeal: { reason, at, version } | null,   // set when the member appeals the agent's decline
   createdAt, updatedAt,
   versions: [ ClaimVersion ],   // mock embeds these. In Firestore use claims/{id}/versions/{n}
   reviews:  [ Review ]          // mock embeds these. In Firestore use claims/{id}/reviews/{id}
@@ -138,7 +145,7 @@ The UI also expects these joined fields on reads (see `claimView` in mockApi):
   memberConfirmedAt, submittedAt,
   validation: {
     passed: bool,                       // true when no check has status 'fail'
-    warnings: number,                   // checks with status 'warn': the treasurer must look
+    warnings: number,                   // checks with status 'warn': shown to whoever looks at the claim next
     ranAt,
     checks: [{ id, status: 'pass' | 'warn' | 'fail', passed: bool, detail }]
   }
@@ -159,17 +166,19 @@ The UI also expects these joined fields on reads (see `claimView` in mockApi):
 {
   id, claimId, claimReference, claimVersion, societyId,
   recipientUserId, recipientAddress,  // copied from users/{claimant}.walletAddress AT APPROVAL
-  sourceAddress,                      // society treasury
+  sourceAddress,                      // the Union wallet
   fiatAmount, fiatCurrency, fxRate, amount /* USDC */, token: 'USDC', network,
   status: 'awaiting_device' | 'cancelled' | 'pending' | 'confirmed' | 'needs_reconciliation',
-  attempts, txHash, approvedBy, approvedAt, deviceConfirmedAt, confirmedAt,
+  attempts, txHash, approvedBy /* 'agent' | society treasurer's uid */, approvedAt, deviceConfirmedAt, confirmedAt,
   history: [{ status, at }]
 }
 ```
 
+On reads, a payment also carries `recipientCheck: { savedWallet, matchesSavedWallet, walletChangedAt, walletSince, earlierPayouts, printedOnReceipt }`, worked out from the user and payment records. The Union treasurer sees it before signing.
+
 ### `auditLog/{id}` (append-only, server-written)
 ```js
-{ id, at, actorId /* uid | 'system' | 'union_finance' */, action, entity: { type, id }, societyId, details }
+{ id, at, actorId /* uid | 'agent' | 'system' | 'union_finance' */, action, entity: { type, id }, societyId, details }
 ```
 The action names the UI knows are listed in `src/pages/AuditLog.jsx` (`LABELS`). If you add a new action, add a label there.
 
@@ -181,21 +190,28 @@ The action names the UI knows are listed in `src/pages/AuditLog.jsx` (`LABELS`).
 ## 3. Claim status machine
 
 ```
-(new) ──submit──▶ validation_failed ──fix & resubmit──▶ pending_review
-                      │ withdraw                          │
-                      ▼                                   ├─ approve ─▶ awaiting_ledger ─device reject─▶ approved ─retry─▶ awaiting_ledger
-                  withdrawn                               │                 │ device signs + broadcast
-                                                          │                 ▼
-                                                          │           payment_pending ─confirmed─▶ paid
-                                                          │                 │ unknown
-                                                          │                 ▼
-                                                          │           needs_reconciliation ─reconcile─▶ paid (or back to approved if tx not found)
-                                                          ├─ return (edit_existing) ─▶ returned ─member edits─▶ pending_review (new version)
-                                                          ├─ return (start_new)     ─▶ returned ─new claim passes─▶ superseded
-                                                          └─ reject ─▶ rejected
+(new) ──submit──▶ the agent decides
+                    │
+                    ├─ approved ─▶ awaiting_ledger ─device signs + broadcast─▶ payment_pending ─confirmed─▶ paid
+                    │                  │ device reject                            │ outcome unknown
+                    │                  ▼                                          ▼
+                    │              approved ─retry─▶ awaiting_ledger       needs_reconciliation ─reconcile─▶ paid
+                    │                                                          (or back to approved if the tx is not found)
+                    │
+                    └─ declined ─▶ validation_failed ─fix & resubmit─▶ the agent decides again
+                                       │ withdraw ─▶ withdrawn
+                                       │ appeal
+                                       ▼
+                                   pending_review   (the society treasurer decides the appeal)
+                                       ├─ uphold ─▶ awaiting_ledger
+                                       ├─ request edits (edit_existing) ─▶ returned ─member edits─▶ the agent decides (new version)
+                                       ├─ request edits (start_new)     ─▶ returned ─new claim passes─▶ superseded
+                                       └─ deny ─▶ rejected
 ```
 Notes:
-- `validation_failed` stands in for "Draft with validation issues" in `user_flows.md`. The version that failed is **replaced** on resubmit, because it was never reviewed. A returned claim gets a **new** version.
+- The stored values are unchanged from the first design, but three now mean something different. `validation_failed` is "declined by the agent", `pending_review` is "appealed", and `rejected` is "appeal denied". The display labels in `CLAIM_STATUS_META` say so.
+- A claim whose `not_flagged` check failed (tampering or hidden instructions) cannot be appealed.
+- A version that the agent declined is **replaced** on resubmit, because nobody reviewed it. A claim returned by a society treasurer gets a **new** version.
 - Payment status values and their labels are in `PAYMENT_STATUS_META` in `schema.js`.
 
 ---
@@ -227,19 +243,20 @@ All methods are async. "Session" means the signed-in, verified user unless noted
 | `listSampleReceipts()` / `getReceipt(sampleId)` | | | demo only |
 | `extractReceipt(receipt, {onProgress?})` | | aiExtraction | runs the AI server-side; strips non-schema keys into `discardedFields`; runs the fraud scan (§5.11). `onProgress({stage, progress})` is optional |
 | `listMyClaims()` | | `[claimView]` | |
-| `listReviewClaims()` | | `[claimView]` for societies where the user has `claims.review` | |
-| `getClaim(id)` | | claimView | claimant, or `claims.view_society` |
-| `submitClaim({claimId?, societyId, fields, receipt, entryMode, aiExtraction?, supersedesClaimId?})` | | claimView (status `pending_review` or `validation_failed`) | §5 |
+| `listReviewClaims()` | | `[claimView]` that have an appeal or a review, for societies where the user has `claims.review` | |
+| `getClaim(id)` | | claimView | claimant, `claims.view_society`, or the Union treasurer when the claim has a payment |
+| `submitClaim({claimId?, societyId, fields, receipt, entryMode, aiExtraction?, supersedesClaimId?, agentVerdict?})` | | claimView (status `awaiting_ledger` or `validation_failed`) | §5. `agentVerdict: { decision, reason, flags }` is the LLM's judgement, stored as the eighth check `agent_judgement` |
+| `appealClaim(id, reason)` | | claimView (status `pending_review`) | owner; status `validation_failed`; `not_flagged` did not fail |
 | `withdrawClaim(id)` | | — | owner; status in validation_failed / pending_review / returned |
-| `reviewClaim(id, {decision, reason, resolution, version})` | | claimView | §5 |
-| `listPayments()` | | `[payment + society + recipient]` | `payments.initiate` |
-| `confirmOnDevice(paymentId)` | | payment | see §6 |
+| `reviewClaim(id, {decision, reason, resolution, version})` | | claimView | §5. This is how a society treasurer decides an appeal |
+| `listPayments()` | | `[payment + society + recipient]` | Union treasurer |
+| `confirmOnDevice(paymentId, {demoOutcome?, txHash?, device?})` | | payment | Union treasurer; see §6 |
 | `cancelOnDevice(paymentId)` | | — | |
 | `retryPayment(paymentId)` | | — | only from `cancelled` |
 | `reconcilePayment(paymentId)` | | payment | look up `txHash` on-chain before any retry |
 | `listAuditLog()` | | `[entry + actorName + societyName]` | own entries plus societies with `claims.view_society` |
 
-`api.demo` (persona switcher, reset) exists only in the mock. Set it to `null` in Firebase.
+`api.demo` (persona switcher, reset, attack-demo switch) exists only in the mock. `api.device` (the emulator's screen and buttons) exists only in hybrid mode. Neither belongs in a production backend.
 
 ---
 
@@ -247,18 +264,18 @@ All methods are async. "Session" means the signed-in, verified user unless noted
 
 The front-end enforces these too, but **the server is authoritative**.
 
-1. **The AI never submits, approves or pays.** `extractReceipt` returns data only. Any key outside the extraction schema (`src/domain/reader/index.js` → `EXTRACTION_FIELDS`) goes into `discardedFields` and is ignored.
-2. **The 7 checks** are in `src/domain/rules.js` (port or import it into Functions). Each returns `pass`, `warn` or `fail`. **Only `fail` stops a claim**; `warn` lets it through and is shown to the treasurer as "things to check".
+1. **The receipt reader never submits, approves or pays, and the agent never pays.** The agent approves or declines a claim and drafts the payment; only the Union treasurer's device can release it. `extractReceipt` returns data only. Any key outside the extraction schema (`src/domain/reader/index.js` → `EXTRACTION_FIELDS`) goes into `discardedFields` and is ignored.
+2. **The 7 checks** are in `src/domain/rules.js` (port or import it into Functions). Each returns `pass`, `warn` or `fail`. **Only `fail` stops a claim**; `warn` lets it through and is shown as "things to check". When the LLM agent is connected its verdict is an eighth check, `agent_judgement`, which passes or fails.
    - `amount_matches` never fails, because the AI can misread a photo and the member must not be stuck. Equal or less than the read total (a partial claim) → `pass`. More than the read total, a different currency, or no total found → `warn`.
    - `not_flagged`: any `block` flag → `fail`; only `warn` flags → `warn`.
    - The other checks are `not_duplicate`, `within_budget`, `allowed_category`, `recent_date` (≤ 90 days), `under_limit`, `not_flagged`. Re-run them server-side on every submit. Never trust `validation` from the client. If the client sends no `aiExtraction` (manual entry), the server reads the receipt itself.
 3. **Server-side re-extraction.** Even when the client sends `aiExtraction`, production should re-extract from the stored receipt rather than trust the browser's copy.
-4. **Separation of duties.** A reviewer can't review their own claim. `logistics_coordinator` can't review, approve or pay.
-5. **Version binding.** `reviewClaim` must receive `version === currentVersion`, otherwise `aborted`. Approval sets `approvedVersion`. Payment is blocked if `currentVersion !== approvedVersion`. Editing a returned claim creates a new version, so a previous approval never carries over.
-6. **Payment is built from trusted records only:** the approved version's amount, the claimant's saved `walletAddress` copied at approval, and the society's token, network and treasury. **Never** use anything from the browser or the receipt.
+4. **Separation of duties.** A society treasurer can't decide an appeal on their own claim, and cannot pay. `logistics_coordinator` can't review, approve or pay. Only the Union treasurer can sign a payment.
+5. **Version binding.** The agent's approval, or a society treasurer's decision on an appeal, applies to one version. `reviewClaim` must receive `version === currentVersion`, otherwise `aborted`. Approval sets `approvedVersion`. Payment is blocked if `currentVersion !== approvedVersion`. Editing a returned claim creates a new version, so a previous approval never carries over.
+6. **Payment is built from trusted records only:** the approved version's amount, the claimant's saved `walletAddress` copied at approval, the society's token and network, and the Union wallet. **Never** use anything from the browser or the receipt.
 7. **A claim is paid only after on-chain confirmation.** `spentThisTerm` is incremented at the same moment.
 8. **Uncertain outcome:** set `needs_reconciliation` and look up `txHash` before allowing any retry, so nobody is paid twice.
-9. **Reimbursement stays disabled** until committee verification, treasury wallet, Ledger pairing, policy and Union approval are all done. Any setup change resets Union approval.
+9. **Reimbursement stays disabled** until a society's setup is complete. Any setup change resets Union approval. (The setup screens still ask each society for its own treasury wallet and Ledger, which the Union-wallet model no longer needs. See §8.)
 10. **Audit log** on: committee claims (all outcomes), permission grants, membership decisions, setup changes, enablement, submissions, reviews, device confirm/reject, payment confirmation and reconciliation.
 11. **Fraud scan runs on everything the reader saw, in plain code** (`src/domain/reader/injection.js`, plus the arithmetic check in `reader/index.js`). It doesn't rely on the AI noticing:
     - **Text instructing an AI** (ignore rules, "note to AI", pre-approved, pay this address, mark urgent) → `prompt_injection`, `block`.
@@ -266,7 +283,7 @@ The front-end enforces these too, but **the server is authoritative**.
     - **Line items that don't add up to the printed total** → `total_mismatch`. This is `block` when a model read the receipt, and `warn` for OCR, because OCR can miss lines.
 
 ### Receipt reader (production)
-Run the reader in a Cloud Function, with the Claude API key held in Ledger Key Ring (CONTEXT.md must-have). The demo's browser version is in `src/domain/reader/claudeReader.js`. Port it as is:
+Run the reader in a Cloud Function, with the Claude API key held in Ledger Key Ring. The demo's browser version is in `src/domain/reader/claudeReader.js`. Port it as is:
 - **Call:** `client.messages.parse` with `output_config.format = jsonSchemaOutputFormat(RECEIPT_SCHEMA)` and effort `low`.
 - **Model:** `claude-opus-5-5` by default; `claude-haiku-5-5` is the cheaper option.
 - **The schema has no payee, amount override or approval field,** so the model can't return one. Text that tries to instruct it is reported in `suspiciousText` instead.
@@ -276,45 +293,46 @@ The demo's free reader is Tesseract.js running in the browser, with a contrast b
 
 ---
 
-## 6. Ledger integration points (where the mock is simulated)
+## 6. Ledger integration points
 
-| UI moment | Mock does | Real implementation |
-|---|---|---|
-| Society setup → "Pair Ledger" | waits 1.6 s, sets `ledgerPaired` | `wallet-cli genuine-check` + record device model |
-| Review → "Approve and sign on Ledger" | creates `payments` doc `awaiting_device` | same, then propose the tx (wallet-cli `send`, or Agent Intent `send` for human review) |
-| `LedgerSignModal` "Hold to sign" | `confirmOnDevice` → `pending`, then `confirmed` after 4 s (or `needs_reconciliation` if the demo selector says so) | the physical device shows amount, recipient and network. The backend gets the result and broadcast hash, then watches for confirmation |
-| Device "Reject" | `cancelOnDevice` → `cancelled`, claim back to `approved` | device rejection or timeout |
-| AI API key | n/a | stored with Ledger Key Ring (`ring encrypt`). No plaintext `.env` |
-
-The device screen in the modal shows `Reimburse claim · {society} · {reference} v{n}` / amount / to / network. That's what we want ERC-7730 clear signing to show (stretch goal).
-
----
-
-## 7. Open questions for backend
-
-- **Network:** the mock uses `base-sepolia`. Confirm the chain we can actually sign on with wallet-cli / Agent Intent, then change `NETWORKS` in `src/config.js`.
-- **FX:** claims are in GBP and paid in USDC. The mock uses a fixed 1.27 (`FX_TO_USDC`). The backend should quote and store `fxRate` at approval. Or do we just claim in USD?
-- **Who confirms `manual_review` committee claims?** There's no Union admin UI yet.
-- **Firebase region:** `src/lib/firebase.js` assumes `europe-west2` for Functions.
+| UI moment | Mock mode | Hybrid mode (built) | Production (not built) |
+|---|---|---|---|
+| The agent decides a claim | The seven checks alone | `POST /api/agent/audit` on `backend/` adds the LLM's verdict | The server runs the checks and the agent itself, and stores the approved claim |
+| "Open Ledger prompt" | `LedgerSignModal` shows a simulated device with "Hold to sign" | The backend drafts the USDC transfer and sends it to an emulated Nano S Plus; the modal mirrors its screen and buttons | The DMK runs in the treasurer's browser with a physical device (WebHID) |
+| Sign | `confirmOnDevice` → `pending`, then `confirmed` after 4 s (or `needs_reconciliation` if the demo selector says so) | The device signs, the backend broadcasts on Base Sepolia and returns the real hash | The same, with the amount and recipient taken from the server's own record |
+| Reject | `cancelOnDevice` → `cancelled`, claim back to `approved` | Rejecting on the device does the same | The same |
+| The agent's API key | n/a | Optionally sealed with Ledger Key Ring | Sealed, on Ledger's production service |
+| Society setup → "Pair Ledger" | waits 1.6 s, sets `ledgerPaired` | The same (simulated) | Not needed in the Union-wallet model |
 
 ---
 
-## 8. Confirmed flow (2026-10-11): the app isn't aligned yet
+## 7. Open questions
 
-The team confirmed this flow. The landing-page animation (`src/components/story/`) shows it. The working app and the schema above still use the older per-society-treasurer model, so **check with front-end before building these parts**:
+- **Exchange rate:** claims are in GBP and paid in USDC at a fixed 1.27 (`FX_TO_USDC` in the frontend, `USDC_PER_GBP` in the backend). A production backend should quote and store `fxRate` at approval.
+- **Who confirms `manual_review` committee claims?** There is no Union admin screen.
+- **Should only committee members be able to claim?** Today any member with `claims.create` can.
 
-| Confirmed flow | App today | Likely schema change |
-|---|---|---|
-| The **Union** holds the Ledger wallet | Each society has `reimbursement.treasuryWallet` and its own Ledger | Move the treasury, Ledger device and payment source to a single `union` doc. Keep per-society budget and policy |
-| The **Union treasurer** reviews and approves | The society treasurer (`claims.review` on a society membership) | New union-level role, e.g. `unionRoles/{uid}: { role: 'union_treasurer' }`, with review rights across all societies |
-| A society **committee member** submits | Any member with `claims.create` | Probably restrict `claims.create` to committee roles. To be decided |
-| Checker rejects → ticket back to the member, who can **override** | A failed claim can only be fixed or withdrawn | New status (e.g. `override_requested`) plus `version.override = { reason, at }`; the claim enters review with the failed checks shown as warnings |
-| **Email the Union treasurer only when a claim is submitted**, never at the moment something is flagged. The email includes the claim, the event (`fields.description`), the amount, and every `warn` check (e.g. "Amount differs from the AI read (£14.59)") | No emails | Cloud Function on submit (status → `pending_review`) |
-| In review, each warning is shown **under the field it concerns** (e.g. under Amount) | Warnings listed in a summary card | Front-end change; no schema change needed (map check id → field: `amount_matches` → amount) |
-| Payment goes to the member's saved crypto address | Same | No change |
+Answered since the first version: the network is Base Sepolia, where the device clear-signs USDC, and signing uses the DMK and the Ethereum Signer Kit, not Wallet CLI or Agent Intent.
+
+---
+
+## 8. From the first design to the current flow
+
+The app began with a per-society treasurer who reviewed and paid each claim. On 2026-10-11 and 2026-10-12 the team moved to the current flow. This table records what changed and what was left.
+
+| Current flow | Status |
+|---|---|
+| The **Union** holds the only wallet and the only Ledger | Built for payments (`payment.sourceAddress` is the Union wallet; only `user.unionRole: 'treasurer'` can sign). **Not built for setup:** the society setup screens and `societies.reimbursement` still have `treasuryWallet`, `ledgerPaired` and `ledgerDevice` |
+| The **agent** approves or declines every claim; no person reviews an approved one | Built |
+| A declined claim can be **appealed** to the society treasurer | Built (`appealClaim`, then `reviewClaim`) |
+| The **Union treasurer** only checks the payment and signs | Built, including the recipient check |
+| Payment goes to the member's saved wallet | Built; unchanged from the first design |
+| Email the Union treasurer when a payment is waiting | Not built |
+| Each warning shown under the field it concerns | Not built; warnings are listed in a summary card |
 
 ## Changelog
 
+- **2026-10-13 (b), documentation only:** this file moved from the repository root to `docs/` and sections 1 to 8 were rewritten to describe the current flow. The entries below are a history; where an older entry disagrees with the sections above, the sections are right.
 - **2026-10-13:**
   - **Recipient check.** Payments returned by `getClaim` and `listPayments` carry `recipientCheck: { savedWallet, matchesSavedWallet, walletChangedAt, walletSince, earlierPayouts, printedOnReceipt }`, worked out server-side from the user and payment records. `components/RecipientCheck.jsx` shows it to the Union treasurer on the claim and in the signing modal. New user field `walletChangedAt`, set by `updateProfile`.
   - **Attack demo (mock and hybrid only).** `api.demo.attack()` / `api.demo.setAttack(bool)`, a checkbox in the demo bar. While on, `extractReceipt` drops the fraud flags and adds `obeyedInstruction: { payTo }` when the receipt text contains an address, and `submitClaim` drafts the payment to that address. Hybrid skips the backend agent for such a claim. Do not port this.

@@ -1,9 +1,9 @@
 /*
  * SocFi design tokens.
- * Base: "Slash" (Design templates/DESIGN (1).md) — obsidian canvas, Inter UI, copper as the only
+ * Base: "Slash" (docs/background/design-references/slash.md) — obsidian canvas, Inter UI, copper as the only
  * warm accent, hairline borders instead of shadows. Display type swapped from serif to uppercase
  * mono for a hardware-wallet feel.
- * Borrowed from "AuthKit" (Design templates/DESIGN.md) — tracked mono eyebrows, faint blueprint grid,
+ * Borrowed from "AuthKit" (docs/background/design-references/authkit.md) — tracked mono eyebrows, faint blueprint grid,
  * inset frost highlight on raised panels.
  */
 :root {

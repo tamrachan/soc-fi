@@ -1,5 +1,7 @@
 # Ledger hackathon
 
+> **Historical document.** Kept as a record of our first plan, written on 10 October 2026. In it a treasurer reviews every claim; in the final app the agent decides and the Union treasurer only signs. It does not describe the app as built: see the [README](../../README.md) for the current flow.
+
 ## The idea
 We're building an AI agent that checks student society expense claims in seconds but can't pay anyone. Only the union treasurer's Ledger can release money.
 ### Pitch: 

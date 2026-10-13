@@ -1,4 +1,6 @@
 # Slash — Style Reference
+
+> A style reference for the Slash website, used as inspiration for SocFi's visual design ([`frontend/src/styles/tokens.css`](../../../frontend/src/styles/tokens.css)). Not SocFi's own design system.
 > Midnight vault with gilded ledger lines.
 
 **Theme:** dark

@@ -1,4 +1,6 @@
 # Authkit — Style Reference
+
+> A style reference for the AuthKit website, used as inspiration for SocFi's visual design ([`frontend/src/styles/tokens.css`](../../../frontend/src/styles/tokens.css)). Not SocFi's own design system.
 > Frosted glass cathedral at midnight
 
 **Theme:** dark
