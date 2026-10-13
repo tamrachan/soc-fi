@@ -8,7 +8,9 @@ Written 2026-10-12 for the next working session, after `backend/` moves into the
 
 Done, and described in the [root README](../README.md) and `backend/README.md`: the hybrid frontend integration (items 1 and 2 below), the agent-decides pivot, a funded treasury wallet on our own seed, and one real payout on Base Sepolia. The LLM agent is verified with a Gemini key. Everything is uncommitted on branch `backend-integration`.
 
-Still open, in order: commit and push the branch (tell the frontend developers first, about 20 of their files changed); Ledger Key Ring for the LLM key (item 4); bring the society setup pages into the Union-wallet model; submission material (item 5). The sections below are the original handover and are out of date where they disagree with this one.
+Oct 13: Ledger Key Ring for the LLM key is built on branch `keyring-spike` (see `backend/README.md`), on Ledger's staging service with an emulated device.
+
+Still open, in order: merge `backend-integration` and `keyring-spike`; bring the society setup pages into the Union-wallet model; submission material (item 5). The sections below are the original handover and are out of date where they disagree with this one.
 
 Read alongside:
 - `backend/README.md`: hackathon brief, scoring, backend decisions, API table, gotchas, developer-experience notes.
