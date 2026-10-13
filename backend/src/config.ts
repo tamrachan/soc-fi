@@ -1,4 +1,5 @@
-import "dotenv/config";
+// Loads .env, then any secrets sealed with Ledger Key Ring, before the values below are read.
+import "./secrets.js";
 import { baseSepolia } from "viem/chains";
 import type { Address } from "viem";
 

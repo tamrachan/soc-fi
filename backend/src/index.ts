@@ -11,6 +11,7 @@ import {
   txHashOf,
   usdcAmount,
 } from "./payout.js";
+import { secrets } from "./secrets.js";
 import { store, type Expense } from "./store.js";
 
 const app = express();
@@ -102,6 +103,16 @@ app.get("/api/treasurer/queue", (_req, res) => {
         amountUsdc: e.amountUsdc ?? formatUnits(usdcAmount(e.amountGbp), config.usdcDecimals),
       })),
   );
+});
+
+// What is live: whether the agent has a model, and where its key came from.
+app.get("/api/status", (_req, res) => {
+  res.json({
+    agent: config.llmApiKey ? config.llmModel : null,
+    agentKey: secrets.source,
+    keyRing: secrets.ring ?? null,
+    broadcast: config.broadcast,
+  });
 });
 
 app.get("/api/treasurer/wallet", async (_req, res) => {

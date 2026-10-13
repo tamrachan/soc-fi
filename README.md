@@ -21,6 +21,7 @@ An AI agent checks student-society expense claims in seconds and decides them on
 | The agent's judgement | None: the seven checks alone decide | Real: `backend/` calls an LLM (`POST /api/agent/audit`) |
 | Ledger signing | Simulated "Hold to sign" modal | Real: an emulated Ledger Nano S Plus signs; the modal mirrors its screen and buttons |
 | Payment | Invented transaction hash | Real USDC transfer on Base Sepolia (a test network, no real money) |
+| The agent's API key | n/a | Optionally sealed with Ledger Key Ring (staging service, emulated device) instead of plain `.env` |
 
 There is no Firebase backend. `VITE_DATA_SOURCE=firebase` still exists but every method throws "unimplemented".
 
@@ -170,4 +171,4 @@ The rows below were rewritten for the agent-decides flow on 2026-10-12. The clai
 - **Landing-page and "How it works" copy** has not been re-read against the new flow.
 - **The agent needs the backend.** On GitHub Pages the seven checks alone decide.
 - **Hybrid trusts the browser for the payment details.** The amount and recipient are sent from the browser's mock store to the backend, so the Ledger screen is the real check on them.
-- **Ledger Key Ring is not used yet.** The LLM key is in a plain `backend/.env`.
+- **Ledger Key Ring runs on Ledger's staging service with an emulated device**, not production. It keeps the LLM key out of `backend/.env`; setup is in [`backend/README.md`](backend/README.md) and is optional for other developers.

@@ -69,7 +69,7 @@ A university society expense handler. The students' union holds funds in a Ledge
 
 ## Current state
 
-Layout: `src/config.ts` (env), `src/agent.ts` (audit), `src/ledger.ts` (DMK + Ethereum signer), `src/payout.ts` (USDC transfer drafting and broadcast), `src/store.ts` (claims, persisted to `data/expenses.json`), `src/index.ts` (routes).
+Layout: `src/config.ts` (env), `src/secrets.ts` (Key Ring decryption at start), `scripts/keyring.cjs` (Key Ring commands), `src/agent.ts` (audit), `src/ledger.ts` (DMK + Ethereum signer), `src/payout.ts` (USDC transfer drafting and broadcast), `src/store.ts` (claims, persisted to `data/expenses.json`), `src/index.ts` (routes).
 
 ### Running it
 
@@ -86,11 +86,37 @@ On Windows use `Copy-Item .env.example .env` and `npm run speculos:win` (a Power
 
 | Variable | What it does |
 | --- | --- |
-| `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` | The agent's model. Any OpenAI-compatible provider. Tested with Gemini (`gemini-3.1-flash-lite` through Google's OpenAI-compatible URL). Without a key the agent declines everything. |
+| `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` | The agent's model. Any OpenAI-compatible provider. Tested with Gemini (`gemini-3.1-flash-lite` through Google's OpenAI-compatible URL). Without a key the agent declines everything. The key can be sealed with Ledger Key Ring instead of sitting here, see below. |
 | `SPECULOS_SEED` | 24 words. The emulated Ledger's seed, which decides the treasury address. `npm run speculos` reads it. Unset means Speculos' public default seed. Testnet funds only. |
 | `BROADCAST` | `false` stops after signing, so no funds are needed; the returned hash is real but never reaches the chain. Default `true`. |
 | `MAX_CLAIM_GBP`, `USDC_PER_GBP` | Per-claim cap (default 100) and the fixed GBP to USDC rate (default 1.27). |
 | `SPECULOS_URL`, `RPC_URL`, `PORT` | Defaults: `http://127.0.0.1:5001`, `https://sepolia.base.org`, `3000`. |
+
+### The agent's key in Ledger Key Ring
+
+The LLM API key does not have to sit in `.env`. It can be sealed: encrypted into `secrets.enc` with a key held in a Ledger Key Ring. The ring is created from the Ledger's seed, and a machine can only join it after an approval on the device. At start the backend fetches the key from Ledger's Key Ring service (no device needed) and decrypts `secrets.enc` in memory. This is optional: with a plain `LLM_API_KEY` in `.env` everything works as before.
+
+One-time setup, per machine:
+
+```sh
+npm run speculos:sync        # second emulator on :5002, running the Ledger Sync app
+npm run keyring -- init      # then approve at http://127.0.0.1:5002: Right to page, Both on "Connect" and "Turn On sync"
+npm run keyring -- seal      # moves LLM_API_KEY from .env into secrets.enc
+```
+
+After that the second emulator can be stopped (`docker stop speculos-sync`). `npm run dev` prints "Secrets decrypted with Ledger Key Ring", and `curl localhost:3000/api/status` shows `"agentKey": "keyring"`.
+
+- `npm run keyring -- status` shows what is sealed. `npm run keyring -- unseal` puts the key back into `.env` and deletes `secrets.enc`.
+- **If the key is also set in plain `.env`, the plain one wins.** That is the fallback if Ledger's service cannot be reached: without either, the agent declines every claim.
+- **Keep a copy of the API key somewhere else** (a password manager). If the service is down or the ring is reset, `secrets.enc` cannot be opened.
+- `data/keyring.json` holds this machine's membership key (file mode 600, git-ignored). It is now the thing to protect: whoever has it and `secrets.enc` can decrypt. The ring's encryption key itself is never written to disk.
+- `secrets.enc` and `data/` are git-ignored, so each developer seals their own key.
+
+What this is and is not:
+
+- It runs against **Ledger's staging Key Ring service**, with an **emulated** device. The emulated Ledger Sync app signs with a public test key, so production is not expected to accept it; we did not try.
+- The Ledger Sync binary is bundled at `speculos/ledger-sync-nanosp.elf`: Ledger Sync v1.4.2, built from [LedgerHQ/app-ledger-sync](https://github.com/LedgerHQ/app-ledger-sync) for the Nano S Plus.
+- The code is `scripts/keyring.cjs` (the commands) and `src/secrets.ts` (decrypting at start). It uses Ledger Live's library `@ledgerhq/ledger-key-ring-protocol`, not the official `wallet-cli ring`, which needs a physical device over USB.
 
 ### The treasury wallet and funding it
 
@@ -121,6 +147,7 @@ The frontend uses only the last four rows. The `/api/expenses` routes are this b
 | `GET /api/expenses/:id` | both | One claim. |
 | `POST /api/expenses/:id/override` | member | Body: `reason`. Only for `agent_rejected`; moves it to the treasurer. |
 | `GET /api/treasurer/queue` | treasurer | Claims awaiting a decision, with flags and USDC amount. |
+| `GET /api/status` | anyone | Which model the agent uses, where its key came from (`keyring`, `env` or `none`), the Key Ring id, and whether payouts are broadcast. |
 | `GET /api/treasurer/wallet` | treasurer | Treasury address (read from the device) and ETH / USDC balances. |
 | `POST /api/expenses/:id/reject` | treasurer | Body: `note`. |
 | `POST /api/expenses/:id/pay` | treasurer | Drafts the transfer and waits for the device. Stays open until the treasurer confirms or rejects. 403 if rejected on the device. |
@@ -138,6 +165,7 @@ Statuses of the backend's own claims (not the frontend's): `agent_approved`, `ag
 - **The LLM agent**, with a Gemini key: it approves and declines with reasons, and uses the society context (it declined baking ingredients claimed as a "team dinner" for the Blockchain Society).
 - `POST /api/payments/sign`: sign, reject (403), a repeated request returning the first result, and the per-claim cap.
 - The backend reconnects on its own after the emulator is restarted.
+- **Ledger Key Ring** (2026-10-13): joining the ring with an approval on the emulated device, sealing and unsealing, and a fresh backend start that decrypted the LLM key and ran the agent with it, with no device running.
 - The frontend's claim, appeal and payment logic, by script. Not every screen has been clicked through.
 
 ### Not verified yet
@@ -149,7 +177,7 @@ Statuses of the backend's own claims (not the frontend's): `agent_approved`, `ag
 
 - Accounts / auth. Routes are open and members are identified by the email in the request body.
 - Treasurer email on override. `notifyTreasurer` in `src/index.ts` only logs.
-- Any use of the Ledger CLI / Key Ring (e.g. keeping the LLM key in it).
+- Key Ring on Ledger's production service or with a physical device (we use staging and the emulator).
 - Persistence for `POST /api/payments/sign`. Its record of sent payments is in memory, so the double-pay guard resets when the backend restarts.
 
 ## Gotchas
@@ -168,3 +196,8 @@ Statuses of the backend's own claims (not the frontend's): `agent_approved`, `ag
 - Nothing in the Signer docs says Speculos must be started with `--pki-prod` for clear signing; the visible error (`6a80 Invalid data`) points nowhere near the cause.
 - The Speculos transport's constructor arguments (HTTP URL, model defaulting to Stax) had to be read from the type definitions.
 - Speculos' default API port collides with macOS AirPlay.
+- **Key Ring cannot be tried without hardware.** `wallet-cli ring init` needs a physical Ledger over USB with the Ledger Sync app; the CLI has no emulator option, and the docs do not say so. A team working on Speculos can use the signer but not Key Ring. (`ring encrypt` / `decrypt` need no device afterwards, only network, the password and the OS keychain.)
+- **Key Ring does work on the emulator, but not by any documented route** (`scripts/keyring.cjs`). What worked: build [LedgerHQ/app-ledger-sync](https://github.com/LedgerHQ/app-ledger-sync) for the Nano S Plus, run it in Speculos, and use Ledger Live's own library `@ledgerhq/ledger-key-ring-protocol` with `@ledgerhq/hw-transport-node-speculos-http` against Ledger's **staging** trustchain service. It created a key ring, added a second member with a device approval, encrypted and decrypted, and decrypted again with the emulator stopped.
+- **The DMK Key Ring package (`@ledgerhq/device-trusted-app-kit-ledger-keyring-protocol` 0.5.0) cannot create a key ring.** It authenticated the emulated device, then failed with "Ledger Sync must be initialized from Ledger Live with this device". Its README has headings and no content.
+- `tsx` cannot load `@ledgerhq/ledger-key-ring-protocol` (it resolves the package to its TypeScript sources, which mix `require` and ESM); plain `node` with CommonJS works.
+- `npx wallet-cli` without the scope runs an unrelated npm package of the same name; the Ledger one is `@ledgerhq/wallet-cli`.
