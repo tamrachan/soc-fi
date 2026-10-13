@@ -19,7 +19,9 @@ import { AGENT_NAME, FX_TO_USDC, UNI_EMAIL_SUFFIX, UNION_TREASURY_WALLET } from 
 // Bump the version whenever the seed data changes, so browsers drop their old copy.
 const DB_KEY = 'socfi.db.v3'
 const SESSION_KEY = 'socfi.session.v1'
-const DEFAULT_USER = 'usr_amara'
+// The deployed demo (a production build) opens signed out on the landing page; local dev opens as Amara.
+// Reset returns to the same default. Personas are still one click away in the demo bar.
+const DEFAULT_USER = import.meta.env.PROD ? null : 'usr_amara'
 const DEMO_CODE = '482913'
 
 const seed = () => {
