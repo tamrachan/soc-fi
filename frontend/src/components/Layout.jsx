@@ -4,7 +4,7 @@ import { useApi, useSession } from '../state/AppState.jsx'
 import { claimableSocieties, isReviewer, isUnionTreasurer, societiesWithPerm } from '../domain/permissions.js'
 import { initials } from '../lib/format.js'
 import { readerLabel } from '../lib/readerSettings.js'
-import { APP_NAME, TAGLINE, UNION_NAME } from '../config.js'
+import { AGENT_NAME, AGENT_ROLE, APP_NAME, TAGLINE, UNION_NAME } from '../config.js'
 import { Icon, Loading } from './ui.jsx'
 
 const PUBLIC_PATHS = ['/', '/signup', '/demo/receipts', '/how-it-works']
@@ -42,7 +42,7 @@ function DemoStrip({ user }) {
         <Link to="/account" className="hide-sm" style={{ color: 'var(--fog)' }}>
           Reader: {readerLabel().startsWith('Claude') ? 'Claude' : 'OCR'}
         </Link>
-        <label className={`demo-toggle hide-sm ${api.demo.attack() ? 'on' : ''}`} title="Skips the fraud scan and makes the agent obey a “pay this address” note hidden on a receipt, so only the Union treasurer and the Ledger can stop the payment.">
+        <label className={`demo-toggle hide-sm ${api.demo.attack() ? 'on' : ''}`} title={`Skips the fraud scan and makes ${AGENT_NAME} obey a “pay this address” note hidden on a receipt, so only the Union treasurer and the Ledger can stop the payment.`}>
           <input type="checkbox" checked={api.demo.attack()} onChange={(e) => api.demo.setAttack(e.target.checked)} />
           Attack demo
         </label>
@@ -170,7 +170,7 @@ export default function Layout() {
           <Link to="/how-it-works" className="link">
             How it works
           </Link>
-          <span className="mono">The agent reads receipts. Only the Union's Ledger can release money.</span>
+          <span className="mono">{AGENT_NAME}, the {AGENT_ROLE}, decides claims. Only the Union's Ledger can release money.</span>
         </div>
       </footer>
     </div>

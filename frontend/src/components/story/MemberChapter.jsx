@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { stagger, steps } from 'animejs'
 import StoryFrame from './StoryFrame.jsx'
 import { captions, tap, useScrollTimeline } from './useScrollTimeline.js'
+import { AGENT_NAME } from '../../config.js'
 
 const STEP = 2000
 const STEPS = [
@@ -9,7 +10,7 @@ const STEPS = [
   { title: 'Your phone reads it', body: 'On-device OCR reads the merchant, date, total and category and fills in the claim. These are only suggestions until you check them.' },
   { title: 'Wrong? Correct it', body: 'The reader saw the total as £14.59. You correct it to £145.90. The change is kept and marked, so the Union treasurer checks it against the receipt.' },
   { title: 'Add the event and submit', body: 'Say what it was for (pizza for the Ledger hackathon), tick each field against the receipt and submit.' },
-  { title: 'Checked in seconds', body: 'The agent runs its eight checks straight away. Approved: the payment is drafted and waits for the Union treasurer’s Ledger. It goes to the wallet saved on your account.' },
+  { title: 'Checked in seconds', body: `${AGENT_NAME} runs his eight checks straight away. Approved: the payment is drafted and waits for the Union treasurer’s Ledger. It goes to the wallet saved on your account.` },
 ]
 
 const ROWS = [
@@ -166,11 +167,11 @@ export default function MemberChapter() {
               <path className="done-check" d="M38 62 l15 15 l30 -32" pathLength="100" />
             </svg>
             <div className="done-text">
-              <b>Approved by the agent</b>
+              <b>Approved by {AGENT_NAME}</b>
               <span className="mono">CLM-0007 · Awaiting Ledger</span>
             </div>
             <div className="mail-card">
-              <span className="mail-to mono">Agent checks · 8 of 8 passed</span>
+              <span className="mail-to mono">{AGENT_NAME}’s checks · 8 of 8 passed</span>
               <b>Pizza · Ledger hackathon · £145.90</b>
               <span>Waiting for the Union treasurer to sign</span>
               <span className="mail-warn">⚠ Amount changed by you: the treasurer will check it</span>

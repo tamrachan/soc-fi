@@ -5,6 +5,7 @@ import { claimableSocieties, isReviewer, isUnionTreasurer, societiesWithPerm } f
 import { fmtMoney, relTime } from '../lib/format.js'
 import { Icon, StatusPill } from '../components/ui.jsx'
 import HowItWorksStory from '../components/story/HowItWorksStory.jsx'
+import { AGENT_NAME, AGENT_ROLE } from '../config.js'
 
 function ScrollCue() {
   return (
@@ -22,13 +23,17 @@ function Boundary() {
         <div className="stack" style={{ '--stack': '10px' }}>
           <span className="eyebrow ruled">The boundary</span>
           <h2>
-            What the agent does, and what <em>only a person</em> can do.
+            What {AGENT_NAME} does, and what <em>only a person</em> can do.
           </h2>
+          <p className="lede">
+            {AGENT_NAME} is the Union's {AGENT_ROLE}: an AI agent that decides every claim on his own. He can be wrong, and he can
+            be tricked, so he is never able to pay.
+          </p>
         </div>
       </div>
       <div className="boundary">
         <div>
-          <h3>The agent, on its own</h3>
+          <h3>{AGENT_NAME}, on his own</h3>
           <ol>
             <li>Reads the receipt and fills in the claim for the member to check</li>
             <li>Runs eight checks on every claim: receipt total, duplicates, budget, category, date, limit, tampering, and whether it's a reasonable expense</li>
@@ -42,7 +47,7 @@ function Boundary() {
             <li>The society treasurer decides appeals: approve, request edits or deny</li>
             <li>The Union treasurer sees the real amount, recipient and network on the Ledger's own screen</li>
             <li>They check that the recipient is the member's saved wallet, and how long it has been theirs</li>
-            <li>They sign or reject on the device. Nothing moves without it, so a tricked agent stops here</li>
+            <li>They sign or reject on the device. Nothing moves without it, so if {AGENT_NAME} is tricked, it stops here</li>
           </ol>
         </div>
       </div>
@@ -52,9 +57,9 @@ function Boundary() {
 
 const HERO_POINTS = [
   ['Snap the receipt', 'Your phone reads it and fills in the claim. You check it and submit.'],
-  ['Checked in seconds', 'An agent checks it against your society’s rules and tells you exactly why if it can’t pass.'],
+  ['Checked in seconds', `${AGENT_NAME}, the Union’s ${AGENT_ROLE}, checks it against your society’s rules and tells you exactly why if it can’t pass.`],
   ['Paid in minutes', 'USDC goes straight to the wallet on your account. No forms, no week-long wait.'],
-  ['Secured by hardware', 'The AI can’t pay anyone. Only the Union treasurer’s Ledger can release money.'],
+  ['Secured by hardware', `${AGENT_NAME} can’t pay anyone. Only the Union treasurer’s Ledger can release money.`],
 ]
 
 function Landing() {
@@ -165,7 +170,7 @@ function Dashboard({ session }) {
               <strong>
                 {c.reference} needs your attention · {c.society.name}
               </strong>
-              {c.status === 'returned' ? c.latestReview?.reason : 'The agent declined it. Fix it or appeal.'}
+              {c.status === 'returned' ? c.latestReview?.reason : `${AGENT_NAME} declined it. Fix it or appeal.`}
             </div>
             <Link to={`/claims/${c.id}`} className="btn btn-ghost btn-sm">
               Open

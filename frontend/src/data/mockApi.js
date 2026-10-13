@@ -14,7 +14,7 @@ import { runChecks } from '../domain/rules.js'
 import { readReceipt } from '../domain/reader/index.js'
 import { matchCommitteeRecord } from '../domain/committeeMatch.js'
 import { round2, toUsdc, isEvmAddress } from '../lib/format.js'
-import { FX_TO_USDC, UNI_EMAIL_SUFFIX, UNION_TREASURY_WALLET } from '../config.js'
+import { AGENT_NAME, FX_TO_USDC, UNI_EMAIL_SUFFIX, UNION_TREASURY_WALLET } from '../config.js'
 
 // Bump the version whenever the seed data changes, so browsers drop their old copy.
 const DB_KEY = 'socfi.db.v3'
@@ -653,10 +653,10 @@ export const mockApi = {
     const u = requireVerified()
     const c = claimById(id)
     if (c.claimantId !== u.id) throw new ApiError('permission-denied', 'Not your claim.')
-    if (c.status !== 'validation_failed') throw new ApiError('failed-precondition', 'Only a claim the agent declined can be appealed.')
+    if (c.status !== 'validation_failed') throw new ApiError('failed-precondition', `Only a claim ${AGENT_NAME} declined can be appealed.`)
     if (c.versions.at(-1).validation.checks.some((x) => x.id === 'not_flagged' && !x.passed))
       throw new ApiError('failed-precondition', 'A receipt flagged for tampering cannot be appealed.')
-    if (!reason?.trim()) throw new ApiError('invalid-argument', 'Say why the agent got it wrong.')
+    if (!reason?.trim()) throw new ApiError('invalid-argument', `Say why ${AGENT_NAME} got it wrong.`)
     c.appeal = { reason: reason.trim(), at: now(), version: c.currentVersion }
     setStatus(c, 'pending_review')
     audit('claim.appealed', { type: 'claim', id }, c.societyId, { version: c.currentVersion })
@@ -806,7 +806,7 @@ export const mockApi = {
       .slice(0, 200)
       .map((a) => ({
         ...out(a),
-        actorName: a.actorId === 'agent' ? 'Agent' : a.actorId === 'system' ? 'System' : a.actorId === 'union_finance' ? 'Union finance' : userCard(a.actorId)?.displayName ?? a.actorId,
+        actorName: a.actorId === 'agent' ? AGENT_NAME : a.actorId === 'system' ? 'System' : a.actorId === 'union_finance' ? 'Union finance' : userCard(a.actorId)?.displayName ?? a.actorId,
         societyName: a.societyId ? societyCard(a.societyId)?.name : null,
       }))
   },

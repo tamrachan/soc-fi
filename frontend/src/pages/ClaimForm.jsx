@@ -9,6 +9,7 @@ import { fmtMoney, shortAddr } from '../lib/format.js'
 import { compressImage } from '../lib/image.js'
 import Receipt from '../components/Receipt.jsx'
 import { Checks, Empty, ErrorText, Icon, Loading, Notice, PageHead } from '../components/ui.jsx'
+import { AGENT_NAME } from '../config.js'
 
 const EMPTY = { merchant: '', date: '', amount: '', currency: 'GBP', category: '', description: '' }
 const VERIFY_KEYS = ['merchant', 'date', 'amount', 'currency', 'category']
@@ -68,7 +69,7 @@ function ReaderResult({ extraction: x }) {
       {blocking.length > 0 && (
         <div className="card card-pad stack" style={{ '--stack': '10px', borderColor: 'rgba(214,143,134,0.45)' }}>
           <span className="eyebrow" style={{ color: 'var(--rose)' }}>
-            Receipt agent · will reject
+            {AGENT_NAME} will reject this
           </span>
           <h2>This receipt looks fraudulent.</h2>
           <ul className="checks">
@@ -382,13 +383,13 @@ export default function ClaimForm() {
         {failed && (
           <div className="card card-pad stack" style={{ '--stack': '10px', borderColor: 'rgba(214,143,134,0.35)' }}>
             <span className="eyebrow" style={{ color: 'var(--rose)' }}>
-              {agentRejected ? 'Rejected by the receipt agent' : 'Declined by the agent'}
+              {agentRejected ? `Rejected by ${AGENT_NAME}` : `Declined by ${AGENT_NAME}`}
             </span>
             {agentRejected && <h2>This receipt can’t be claimed.</h2>}
             <p className="muted" style={{ fontSize: 14 }}>
               {agentRejected
                 ? 'The receipt shows signs of tampering or hidden instructions. Nothing was sent for payment, and the attempt is on the audit log.'
-                : 'Fix the fields below and resubmit. If you think the agent got it wrong, appeal to your society treasurer.'}
+                : `Fix the fields below and resubmit. If you think ${AGENT_NAME} got it wrong, appeal to your society treasurer.`}
             </p>
             <Checks validation={failed.latest.validation} only={['fail']} />
             <div className="row">

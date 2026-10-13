@@ -2,11 +2,12 @@ import { useRef } from 'react'
 import { stagger } from 'animejs'
 import StoryFrame from './StoryFrame.jsx'
 import { captions, useScrollTimeline } from './useScrollTimeline.js'
+import { AGENT_NAME } from '../../config.js'
 
 const STEP = 2500
 const STEPS = [
-  { title: 'Open the queue', body: 'Every claim the agent approves lands in the Union treasurer’s payments queue, from every society, with anything that needs a second look marked.' },
-  { title: 'Check what’s flagged', body: 'The warning sits right under the amount you changed, next to the receipt. The treasurer checks that one field; the agent’s other checks already passed.' },
+  { title: 'Open the queue', body: `Every claim ${AGENT_NAME} approves lands in the Union treasurer’s payments queue, from every society, with anything that needs a second look marked.` },
+  { title: 'Check what’s flagged', body: `The warning sits right under the amount you changed, next to the receipt. The treasurer checks that one field; ${AGENT_NAME}’s other checks already passed.` },
   { title: 'Review it on the device', body: 'One click sends the payment to the Union’s Ledger. Its own screen shows the real amount and recipient, so even a hacked laptop can’t change them.' },
   { title: 'Sign, or reject', body: 'If it matches, the treasurer holds the button to sign and USDC moves to your saved wallet. If it doesn’t, they reject on the device and nothing is sent.' },
 ]
@@ -107,7 +108,7 @@ export default function TreasurerChapter() {
           <div className="win-body">
             <div className="scene w-inbox">
               <div className="w-title">
-                <b>Payments</b> <span className="mono faint">3 approved by the agent · awaiting Ledger</span>
+                <b>Payments</b> <span className="mono faint">3 approved by {AGENT_NAME} · awaiting Ledger</span>
               </div>
               {QUEUE.map(([merchant, sub, amt, checks], i) => (
                 <div key={merchant} className={`q-row ${i === 0 ? 'first' : ''}`}>
@@ -159,7 +160,7 @@ export default function TreasurerChapter() {
                   </div>
                   <div className="cf-warn">Changed by you. The reader saw £14.59, so check the receipt total.</div>
                 </div>
-                <span className="cf-summary">✓ Approved by the agent · 7 other checks passed</span>
+                <span className="cf-summary">✓ Approved by {AGENT_NAME} · 7 other checks passed</span>
                 <div className="ledger-row">
                   <span className="ledger-btn">Open Ledger prompt</span>
                   <span className="faint">Reject on the device if anything’s off</span>

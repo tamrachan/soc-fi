@@ -4,7 +4,7 @@ import { api } from '../data/api.js'
 import { useAction, useApi, useSession } from '../state/AppState.jsx'
 import { CATEGORIES, CLAIM_STATUS_META } from '../data/schema.js'
 import { fmtDate, fmtMoney, shortAddr } from '../lib/format.js'
-import { NETWORKS } from '../config.js'
+import { AGENT_NAME, AGENT_ROLE, NETWORKS } from '../config.js'
 import Receipt from '../components/Receipt.jsx'
 import ClaimTimeline from '../components/ClaimTimeline.jsx'
 import { Checks, Empty, ErrorText, Loading, Notice, PageHead, StatusPill } from '../components/ui.jsx'
@@ -18,7 +18,8 @@ function Appeal({ claim }) {
 
   return (
     <div className="card card-pad stack" style={{ '--stack': '12px', borderColor: 'rgba(214,143,134,0.35)' }}>
-      <span className="eyebrow" style={{ color: 'var(--rose)' }}>Declined by the agent</span>
+      <span className="eyebrow" style={{ color: 'var(--rose)' }}>Declined by {AGENT_NAME}</span>
+      <p className="hint">{AGENT_NAME} is the Union's {AGENT_ROLE}, an AI agent. He can get things wrong, so a person hears any appeal.</p>
       <Checks validation={claim.latest.validation} only={['fail']} />
       {open ? (
         <form
@@ -29,7 +30,7 @@ function Appeal({ claim }) {
             appeal()
           }}
         >
-          <label className="label" htmlFor="appeal-reason">Why did the agent get it wrong? Your society treasurer will read this.</label>
+          <label className="label" htmlFor="appeal-reason">Why did {AGENT_NAME} get it wrong? Your society treasurer will read this.</label>
           <textarea id="appeal-reason" className="textarea" value={reason} onChange={(e) => setReason(e.target.value)} />
           <ErrorText error={error} />
           <div className="row">
@@ -84,8 +85,8 @@ export default function ClaimDetail() {
 
       <div className="stack" style={{ '--stack': '12px', marginBottom: 28 }}>
         {state?.submitted && claim.status === 'awaiting_ledger' && (
-          <Notice tone="sage" title="Approved by the agent.">
-            No treasurer review needed. It's waiting for the Union treasurer to sign the payment on the Ledger.
+          <Notice tone="sage" title={`Approved by ${AGENT_NAME}, the Union's ${AGENT_ROLE}.`}>
+            No society treasurer needs to review it. It's waiting for the Union treasurer to sign the payment on the Ledger.
           </Notice>
         )}
         {claim.status === 'pending_review' && claim.appeal && (

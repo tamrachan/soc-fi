@@ -1,5 +1,8 @@
 export const APP_NAME = 'SocFi'
 export const TAGLINE = 'Society Finance, secured.'
+// The agent has a name. He is the Union's virtual treasurer: he decides claims and cannot pay.
+export const AGENT_NAME = 'Kevin'
+export const AGENT_ROLE = 'virtual treasurer'
 export const UNIVERSITY = 'University of St Andrews'
 export const UNION_NAME = "St Andrews Students' Association"
 export const UNION_SHORT = 'Your Union'

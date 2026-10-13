@@ -2,7 +2,7 @@
 // backend/ (Express + Ledger DMK): the agent's verdict on a claim, and the Ledger signature.
 // For the signature the backend drafts the USDC transfer, waits for the treasurer
 // to confirm on the device, broadcasts it and returns the transaction hash.
-import { BACKEND_URL } from '../config.js'
+import { AGENT_NAME, BACKEND_URL } from '../config.js'
 import { ApiError } from './errors.js'
 import { mockApi } from './mockApi.js'
 
@@ -41,7 +41,7 @@ export const hybridApi = {
     // Attack demo: the agent is not asked. It is taken to have followed the receipt's hidden text.
     const tricked = mockApi.demo.attack() && extraction?.obeyedInstruction
     const agentVerdict = tricked
-      ? { decision: 'approve', reason: 'Attack demo: the agent followed the instructions hidden on the receipt.', flags: [] }
+      ? { decision: 'approve', reason: `Attack demo: ${AGENT_NAME} followed the instructions hidden on the receipt.`, flags: [] }
       : await post('/api/agent/audit', {
           society: {
             name,

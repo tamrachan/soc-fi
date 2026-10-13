@@ -1,4 +1,5 @@
 // Shared enums. Keep in sync with HANDOVER.md — the backend uses the same string values.
+import { AGENT_NAME } from '../config.js'
 
 export const CLAIM_STATUS = {
   VALIDATION_FAILED: 'validation_failed', // the agent declined it; member can fix and resubmit, or appeal
@@ -15,7 +16,7 @@ export const CLAIM_STATUS = {
 }
 
 export const CLAIM_STATUS_META = {
-  validation_failed: { label: 'Declined by agent', tone: 'rose', member: 'The agent declined this claim. Fix it and resubmit, or appeal to your society treasurer.' },
+  validation_failed: { label: `Declined by ${AGENT_NAME}`, tone: 'rose', member: `${AGENT_NAME} declined this claim. Fix it and resubmit, or appeal to your society treasurer.` },
   pending_review: { label: 'Appealed', tone: 'ice', member: 'Your appeal is with your society treasurer.' },
   returned: { label: 'Edits requested', tone: 'copper', member: 'Your treasurer asked for changes.' },
   rejected: { label: 'Appeal denied', tone: 'rose', member: 'This claim will not be paid.' },
@@ -105,7 +106,7 @@ export const CHECKS = [
   { id: 'under_limit', label: 'Under the per-claim limit' },
   { id: 'not_flagged', label: 'No signs of fraud or hidden instructions' },
   // Only present when the backend agent is connected (VITE_DATA_SOURCE=hybrid).
-  { id: 'agent_judgement', label: 'Agent: a reasonable expense for this society' },
+  { id: 'agent_judgement', label: `${AGENT_NAME}: a reasonable expense for this society` },
 ]
 
 export const REIMBURSEMENT_STATUS = {

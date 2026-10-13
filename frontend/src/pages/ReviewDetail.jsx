@@ -5,7 +5,7 @@ import { useAction, useApi, useSession } from '../state/AppState.jsx'
 import { hasPerm, isUnionTreasurer } from '../domain/permissions.js'
 import { CATEGORIES } from '../data/schema.js'
 import { fmtDate, fmtMoney, shortAddr } from '../lib/format.js'
-import { NETWORKS } from '../config.js'
+import { AGENT_NAME, NETWORKS } from '../config.js'
 import Receipt from '../components/Receipt.jsx'
 import ClaimTimeline from '../components/ClaimTimeline.jsx'
 import LedgerSignModal from '../components/LedgerSignModal.jsx'
@@ -90,7 +90,7 @@ function PaymentPanel({ claim, onOpenLedger, nextId, canSign }) {
         <>
           <h2>Waiting for your Ledger.</h2>
           <p className="muted" style={{ fontSize: 14 }}>
-            {p.approvedBy === 'agent' ? 'Approved by the agent.' : 'Appeal upheld by the society treasurer.'} Your job is to check that the
+            {p.approvedBy === 'agent' ? `Approved by ${AGENT_NAME}.` : 'Appeal upheld by the society treasurer.'} Your job is to check that the
             amount and recipient on the device match this claim.
           </p>
           <RecipientCheck payment={p} claimant={claim.claimant} />
@@ -217,7 +217,7 @@ export default function ReviewDetail() {
           </div>
         )}
         {claim.appeal && claim.status === 'pending_review' && (
-          <Notice tone="ice" title={`${first} appealed the agent's decision`}>
+          <Notice tone="ice" title={`${first} appealed ${AGENT_NAME}'s decision`}>
             “{claim.appeal.reason}”
           </Notice>
         )}
@@ -256,7 +256,7 @@ export default function ReviewDetail() {
               <span className="eyebrow" style={{ color: 'var(--rose)' }}>
                 Prompt injection not contained
               </span>
-              <h2>The AI was tricked, and the payment follows the receipt.</h2>
+              <h2>{AGENT_NAME} was tricked, and the payment follows the receipt.</h2>
               <p className="muted" style={{ fontSize: 14 }}>
                 Hidden text on this receipt named another wallet, and the drafted transfer pays it instead of {first}'s saved
                 wallet. Every automated check passed. Only your signature on the Ledger can release it, so reject it there.

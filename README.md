@@ -1,6 +1,6 @@
 # SocFi — Society Finance, secured.
 
-An AI agent checks student-society expense claims in seconds and decides them on its own, but it can't pay anyone. Only the Union treasurer's Ledger can release the money. See [`Context/CONTEXT.md`](Context/CONTEXT.md) and [`user_flows.md`](user_flows.md).
+An AI agent checks student-society expense claims in seconds and decides them on its own, but it can't pay anyone. In the app the agent is called **Kevin**, the Union's virtual treasurer (`AGENT_NAME` in `frontend/src/config.js`); "the agent" and "Kevin" mean the same thing throughout. Only the Union treasurer's Ledger can release the money. See [`Context/CONTEXT.md`](Context/CONTEXT.md) and [`user_flows.md`](user_flows.md).
 
 ## How a claim flows
 

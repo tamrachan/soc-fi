@@ -4,7 +4,7 @@ import { useAction } from '../state/AppState.jsx'
 import { checkStatus } from '../domain/rules.js'
 import { CHECKS } from '../data/schema.js'
 import { fmtMoney, shortAddr, toUsdc } from '../lib/format.js'
-import { FX_TO_USDC, NETWORKS } from '../config.js'
+import { AGENT_NAME, FX_TO_USDC, NETWORKS } from '../config.js'
 import { ErrorText, Icon } from './ui.jsx'
 
 const QUICK_REASONS = {
@@ -37,7 +37,7 @@ function Attention({ claim }) {
   return (
     <div className="stack" style={{ '--stack': '6px' }}>
       <span className="eyebrow">
-        Why the agent declined, and what to check
+        Why {AGENT_NAME} declined, and what to check
       </span>
       {warns.map((c) => (
         <p key={c.id} className="row" style={{ gap: 8, fontSize: 14, alignItems: 'flex-start', flexWrap: 'nowrap' }}>

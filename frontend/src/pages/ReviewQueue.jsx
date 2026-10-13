@@ -5,6 +5,7 @@ import { useApi, useSession } from '../state/AppState.jsx'
 import { isReviewer } from '../domain/permissions.js'
 import { fmtMoney, relTime } from '../lib/format.js'
 import { checksSummary, Empty, Loading, PageHead, StatusPill } from '../components/ui.jsx'
+import { AGENT_NAME, AGENT_ROLE } from '../config.js'
 
 const TABS = [
   { id: 'pending', label: 'Appeals to decide', match: (s) => s === 'pending_review' },
@@ -29,7 +30,7 @@ export default function ReviewQueue() {
       <PageHead
         eyebrow="Society treasurer"
         title="Appeals."
-        lede="The agent approves and declines claims on its own. You only see a claim when a member appeals a decline. Upholding an appeal sends the payment to the Union treasurer, who signs it on the Ledger."
+        lede={`${AGENT_NAME}, the ${AGENT_ROLE}, approves and declines claims on his own. You only see a claim when a member appeals a decline. Upholding an appeal sends the payment to the Union treasurer, who signs it on the Ledger.`}
       />
 
       <div className="tabs" role="tablist">
@@ -45,7 +46,7 @@ export default function ReviewQueue() {
         <Loading />
       ) : rows.length === 0 ? (
         <Empty title={tab === 'pending' ? 'No appeals' : 'Nothing here'}>
-          <p>{tab === 'pending' ? 'A claim appears here when a member appeals the agent’s decision.' : ''}</p>
+          <p>{tab === 'pending' ? `A claim appears here when a member appeals ${AGENT_NAME}’s decision.` : ''}</p>
         </Empty>
       ) : (
         <div className="table-wrap">

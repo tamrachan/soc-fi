@@ -2,6 +2,7 @@ import { api } from '../data/api.js'
 import { useApi, useSession } from '../state/AppState.jsx'
 import { fmtDateTime } from '../lib/format.js'
 import { Empty, Loading, PageHead } from '../components/ui.jsx'
+import { AGENT_NAME } from '../config.js'
 
 const LABELS = {
   'user.signed_up': 'Signed up',
@@ -21,9 +22,9 @@ const LABELS = {
   'society.reimbursement_enabled': 'Enabled reimbursement',
   'claim.submitted': 'Submitted claim',
   'claim.withdrawn': 'Withdrew claim',
-  'claim.agent_approved': 'Approved claim (agent)',
-  'claim.agent_declined': 'Declined claim (agent)',
-  'claim.appealed': 'Appealed the agent’s decision',
+  'claim.agent_approved': 'Approved claim',
+  'claim.agent_declined': 'Declined claim',
+  'claim.appealed': `Appealed ${AGENT_NAME}’s decision`,
   'claim.approved': 'Upheld appeal',
   'claim.returned': 'Requested edits',
   'claim.rejected': 'Denied appeal',

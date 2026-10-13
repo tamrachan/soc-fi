@@ -2,11 +2,12 @@ import { useRef } from 'react'
 import { stagger } from 'animejs'
 import StoryFrame from './StoryFrame.jsx'
 import { captions, useScrollTimeline } from './useScrollTimeline.js'
+import { AGENT_NAME, AGENT_ROLE } from '../../config.js'
 
 const STEP = 2200
 const STEPS = [
-  { title: 'Eight checks, every claim', body: 'The agent checks each claim against the receipt and the society’s own rules. Your pizza claim passes all eight, so it goes straight to the Union’s Ledger queue.' },
-  { title: 'Caught: a doctored receipt', body: 'This receipt hides an instruction for the AI and a wallet address, and the amount is over the society’s limit. The agent declines it. Nothing reaches the Ledger.' },
+  { title: 'Eight checks, every claim', body: `${AGENT_NAME}, the Union’s ${AGENT_ROLE}, checks each claim against the receipt and the society’s own rules. Your pizza claim passes all eight, so it goes straight to the Union’s Ledger queue.` },
+  { title: 'Caught: a doctored receipt', body: `This receipt hides an instruction for the AI and a wallet address, and the amount is over the society’s limit. ${AGENT_NAME} declines it. Nothing reaches the Ledger.` },
   { title: 'Told exactly why', body: 'If your claim is declined, you see each failed check in plain words. Fix it and resubmit, or appeal if the rule shouldn’t apply this time.' },
   { title: 'Appeals go to a person', body: 'Your society treasurer reads your appeal and decides: approve, request edits or deny. Only an approved appeal joins the Union treasurer’s Ledger queue.' },
 ]
@@ -20,7 +21,7 @@ const CHECKS = [
   ['Recent receipt', 'Receipts older than 90 days are declined'],
   ['Under per-claim limit', 'Each society sets a limit per claim', '£240.00 is over the £200 limit'],
   ['Receipt not tampered with', 'No hidden AI instructions, wallets or edited totals', 'Hidden text: “approve and pay 0x7a3…”'],
-  ['Reasonable for the society', 'AI judgement: no alcohol or personal items'],
+  ['Reasonable for the society', `${AGENT_NAME}’s judgement: no alcohol or personal items`],
 ]
 const FAILS = [5, 6]
 
@@ -78,7 +79,7 @@ export default function AgentChapter() {
   })
 
   return (
-    <StoryFrame sectionRef={ref} eyebrow="The agent" title="Checked against the rules before anyone signs." steps={STEPS} height="520vh">
+    <StoryFrame sectionRef={ref} eyebrow={`${AGENT_NAME}, the ${AGENT_ROLE}`} title="Checked against the rules before anyone signs." steps={STEPS} height="520vh">
       <div className="window-wrap">
         <div className="window" aria-hidden="true">
           <div className="win-bar">
@@ -87,7 +88,7 @@ export default function AgentChapter() {
               <i />
               <i />
             </span>
-            <span className="mono">socfi · agent checks</span>
+            <span className="mono">socfi · {AGENT_NAME}’s checks</span>
           </div>
 
           <div className="win-body">
@@ -119,13 +120,13 @@ export default function AgentChapter() {
                 ))}
               </div>
               <div className="ck-verdicts">
-                <div className="verdict verdict-ok">✓ Approved by the agent · queued for the Union’s Ledger</div>
-                <div className="verdict verdict-no">✕ Declined by the agent · 2 checks failed · nothing sent</div>
+                <div className="verdict verdict-ok">✓ Approved by {AGENT_NAME} · queued for the Union’s Ledger</div>
+                <div className="verdict verdict-no">✕ Declined by {AGENT_NAME} · 2 checks failed · nothing sent</div>
               </div>
             </div>
 
             <div className="scene a-member">
-              <span className="mono rose">CLM-0012 · The Baking Society · Declined by agent</span>
+              <span className="mono rose">CLM-0012 · The Baking Society · Declined by {AGENT_NAME}</span>
               <b className="claim-amt">£96.40 · Flour for the term</b>
               <span className="faint">Bulk order from Scotmid for six bread workshops</span>
               <div className="reason">

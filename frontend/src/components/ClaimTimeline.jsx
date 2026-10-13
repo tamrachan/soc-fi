@@ -1,4 +1,5 @@
 import { fmtDateTime, fmtMoney } from '../lib/format.js'
+import { AGENT_NAME } from '../config.js'
 
 const DECISION = { approve: 'Appeal upheld', return: 'Edits requested', reject: 'Appeal denied' }
 const RESOLUTION = { edit_existing: 'edit this claim', start_new: 'start a new claim' }
@@ -16,7 +17,7 @@ export function claimEvents(claim, names = {}) {
     ev.push({
       at: v.submittedAt,
       title: v.version === 1 ? 'Submitted' : `Resubmitted as version ${v.version}`,
-      sub: `${fmtMoney(v.fields.amount, v.fields.currency)} · ${v.validation.passed ? 'approved by the agent' : 'declined by the agent'}`,
+      sub: `${fmtMoney(v.fields.amount, v.fields.currency)} · ${v.validation.passed ? `approved by ${AGENT_NAME}` : `declined by ${AGENT_NAME}`}`,
     })
   }
   if (claim.appeal) ev.push({ at: claim.appeal.at, title: 'Appealed to the society treasurer', sub: '', quote: claim.appeal.reason })

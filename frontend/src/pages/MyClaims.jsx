@@ -7,6 +7,7 @@ import { claimableSocieties } from '../domain/permissions.js'
 import { CLAIM_STATUS_META } from '../data/schema.js'
 import { fmtDate, fmtMoney } from '../lib/format.js'
 import { Empty, Loading, PageHead, StatusPill } from '../components/ui.jsx'
+import { AGENT_NAME } from '../config.js'
 
 function NextStep({ claim }) {
   const r = claim.latestReview
@@ -37,7 +38,7 @@ function InFlight({ userId }) {
             </div>
             {s.status === 'checking' ? (
               <div className="reading">
-                <span className="spinner dark" /> The agent is checking this claim…
+                <span className="spinner dark" /> {AGENT_NAME} is checking this claim…
               </div>
             ) : (
               <div className="row" style={{ gap: 10 }}>

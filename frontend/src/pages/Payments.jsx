@@ -3,7 +3,7 @@ import { api } from '../data/api.js'
 import { useApi, useSession } from '../state/AppState.jsx'
 import { isUnionTreasurer } from '../domain/permissions.js'
 import { fmtDateTime, fmtMoney, shortAddr } from '../lib/format.js'
-import { NETWORKS } from '../config.js'
+import { AGENT_NAME, NETWORKS } from '../config.js'
 import { Empty, Loading, PageHead, PaymentPill } from '../components/ui.jsx'
 
 export default function Payments() {
@@ -19,7 +19,7 @@ export default function Payments() {
       <PageHead
         eyebrow="Union treasurer"
         title="Payments."
-        lede="Each payment here was already approved, by the agent or by a society treasurer on appeal. Your job is to check that the amount and recipient on the Ledger match the claim, then sign."
+        lede={`Each payment here was already approved, by ${AGENT_NAME} or by a society treasurer on appeal. Your job is to check that the amount and recipient on the Ledger match the claim, then sign.`}
       />
       {!payments ? (
         <Loading />
