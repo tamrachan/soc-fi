@@ -54,6 +54,10 @@ main.container { padding-block: 40px 96px; flex: 1; }
   text-transform: none;
   color: var(--silver);
 }
+.demo-strip label.demo-toggle { display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px; border: 1px solid var(--line-2); border-radius: var(--r-pill); color: var(--fog); cursor: pointer; }
+.demo-strip label.demo-toggle:hover { color: var(--white); }
+.demo-strip label.demo-toggle.on { color: var(--rose); border-color: var(--rose); background: var(--rose-wash); }
+.demo-strip label.demo-toggle input { margin: 0; width: 12px; height: 12px; accent-color: var(--rose); cursor: pointer; }
 .demo-strip button { background: none; border: 0; padding: 0; color: var(--fog); font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
 .demo-strip button:hover { color: var(--white); }
 .demo-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--copper); box-shadow: 0 0 0 3px var(--copper-wash); }
@@ -255,6 +259,12 @@ p { margin: 0; }
 .notice.rose .notice-bar { background: var(--rose); }
 .notice.sage .notice-bar { background: var(--sage); }
 .notice.ice .notice-bar { background: var(--ice); }
+/* The one notice that must not be missed: a payment that does not go to the claimant. */
+.notice.notice-alert { border-color: var(--rose); background: var(--rose-wash); padding: 18px 20px; gap: 16px; }
+.notice.notice-alert .notice-bar { width: 3px; }
+.notice.notice-alert strong { color: var(--rose); font-size: 17px; line-height: 1.3; margin-bottom: 8px; }
+.notice.notice-alert p + p { margin-top: 8px; }
+.notice.notice-alert .addr { display: block; font-size: 13px; color: var(--white); margin: 2px 0 6px; }
 .error-text { color: var(--rose); font-size: 13px; }
 
 /* ---------- checks list ---------- */

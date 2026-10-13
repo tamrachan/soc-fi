@@ -315,6 +315,12 @@ The team confirmed this flow. The landing-page animation (`src/components/story/
 
 ## Changelog
 
+- **2026-10-13:**
+  - **Recipient check.** Payments returned by `getClaim` and `listPayments` carry `recipientCheck: { savedWallet, matchesSavedWallet, walletChangedAt, walletSince, earlierPayouts, printedOnReceipt }`, worked out server-side from the user and payment records. `components/RecipientCheck.jsx` shows it to the Union treasurer on the claim and in the signing modal. New user field `walletChangedAt`, set by `updateProfile`.
+  - **Attack demo (mock and hybrid only).** `api.demo.attack()` / `api.demo.setAttack(bool)`, a checkbox in the demo bar. While on, `extractReceipt` drops the fraud flags and adds `obeyedInstruction: { payTo }` when the receipt text contains an address, and `submitClaim` drafts the payment to that address. Hybrid skips the backend agent for such a claim. Do not port this.
+  - **Submitting in the background.** `data/submissions.js` runs `submitClaim` outside the form and lists claims still being checked on My claims. `submitClaim` takes an internal `asUserId` so a claim stays with whoever submitted it.
+  - **Sample receipts added:** `rcp_coop_beer`, `rcp_stickers` (hidden "pay this wallet" text). Seed changes need **Reset**.
+
 - **2026-10-12 (backend integration, branch `backend-integration`):**
   - **No Firebase.** A third data source, `VITE_DATA_SOURCE=hybrid` (`src/data/hybridApi.js`), spreads `mockApi` and replaces two methods with calls to `backend/` (`VITE_BACKEND_URL`, default `http://localhost:3000`): `submitClaim` (asks the LLM agent for a verdict first) and `confirmOnDevice` (real signature on the emulated Ledger, real USDC transfer). It also adds `api.device` (`label`, `screenshotUrl()`, `press(button)`). `isMock` is true for both mock and hybrid; the new `hasDevice` export is true only for hybrid.
   - **The agent decides (most of §8 is now built).** `submitClaim` no longer sends a passing claim to `pending_review`. A claim that passes gets a payment at once and status `awaiting_ledger`; one that fails gets `validation_failed`. `submitClaim` accepts an optional `agentVerdict: { decision, reason, flags }`, stored as an eighth check, `agent_judgement` (added to `CHECKS`; only present in hybrid mode).

@@ -42,6 +42,10 @@ function DemoStrip({ user }) {
         <Link to="/account" className="hide-sm" style={{ color: 'var(--fog)' }}>
           Reader: {readerLabel().startsWith('Claude') ? 'Claude' : 'OCR'}
         </Link>
+        <label className={`demo-toggle hide-sm ${api.demo.attack() ? 'on' : ''}`} title="Skips the fraud scan and makes the agent obey a “pay this address” note hidden on a receipt, so only the Union treasurer and the Ledger can stop the payment.">
+          <input type="checkbox" checked={api.demo.attack()} onChange={(e) => api.demo.setAttack(e.target.checked)} />
+          Attack demo
+        </label>
         <button
           onClick={() => {
             api.demo.reset()

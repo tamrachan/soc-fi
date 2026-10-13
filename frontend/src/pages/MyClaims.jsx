@@ -1,5 +1,7 @@
+import { useSyncExternalStore } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../data/api.js'
+import { dismissSubmission, getSubmissions, retrySubmission, subscribeSubmissions } from '../data/submissions.js'
 import { useApi, useSession } from '../state/AppState.jsx'
 import { claimableSocieties } from '../domain/permissions.js'
 import { CLAIM_STATUS_META } from '../data/schema.js'
@@ -17,6 +19,44 @@ function NextStep({ claim }) {
   return <span className="faint" style={{ fontSize: 13 }}>{CLAIM_STATUS_META[claim.status]?.member}</span>
 }
 
+/** Claims still with the agent, or whose check could not run. They are not saved claims yet. */
+function InFlight({ userId }) {
+  const mine = useSyncExternalStore(subscribeSubmissions, getSubmissions).filter((s) => s.userId === userId)
+  if (mine.length === 0) return null
+  return (
+    <div className="stack" style={{ '--stack': '10px', marginBottom: 24 }}>
+      {mine.map((s) => {
+        const f = s.payload.fields
+        return (
+          <div key={s.id} className="card card-pad row between" style={{ gap: 16 }}>
+            <div>
+              <div>
+                {f.merchant} · {fmtMoney(f.amount, f.currency)}
+              </div>
+              <span className="hint">{s.societyName}</span>
+            </div>
+            {s.status === 'checking' ? (
+              <div className="reading">
+                <span className="spinner dark" /> The agent is checking this claim…
+              </div>
+            ) : (
+              <div className="row" style={{ gap: 10 }}>
+                <span className="error-text">Not submitted: {s.error?.message ?? 'something went wrong.'}</span>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => retrySubmission(s.id)}>
+                  Try again
+                </button>
+                <button type="button" className="text-btn" onClick={() => dismissSubmission(s.id)}>
+                  Discard
+                </button>
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function MyClaims() {
   const session = useSession()
   const navigate = useNavigate()
@@ -32,6 +72,7 @@ export default function MyClaims() {
           </Link>
         )}
       </PageHead>
+      <InFlight userId={session.user.id} />
       {!claims ? (
         <Loading />
       ) : claims.length === 0 ? (

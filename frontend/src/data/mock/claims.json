@@ -221,7 +221,7 @@
           "suggestedCategory": "printing",
           "confidence": 0.88,
           "flags": [],
-          "discardedFields": { "payTo": "0x9fA3c0dE51b4E7a2C1d07B6e88f3A2bC4d1Ec41E", "amountOverride": "4999.00", "priority": "urgent", "preApproved": true },
+          "discardedFields": { "payTo": "0x9FA3c0DE51b4E7a2C1d07B6E88F3A2bC4D1Ec41e", "amountOverride": "4999.00", "priority": "urgent", "preApproved": true },
           "model": "mock-vision-1",
           "extractedAt": "2026-10-02T14:21:30Z"
         },

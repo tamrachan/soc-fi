@@ -72,6 +72,20 @@ function commit() {
 }
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+
+// Demo only: what would happen if the software safeguards failed. With it on, the reader's fraud
+// scan is skipped and the agent obeys a "pay this address" instruction hidden on a receipt, so the
+// drafted payment goes to the receipt's address. Nothing else changes: the Union treasurer's
+// recipient check and the Ledger are the only things left to stop it.
+const ATTACK_KEY = 'socfi.attackDemo'
+let attackDemo = (() => {
+  try {
+    return localStorage.getItem(ATTACK_KEY) === '1'
+  } catch {
+    return false
+  }
+})()
+const sameAddr = (a, b) => !!a && !!b && a.toLowerCase() === b.toLowerCase()
 const now = () => new Date().toISOString()
 const uid = (p) => `${p}_${Math.random().toString(36).slice(2, 8)}`
 const out = (x) => structuredClone(x)
@@ -93,8 +107,11 @@ function requireVerified() {
   return u
 }
 const membership = (userId, societyId) => db.memberships.find((m) => m.userId === userId && m.societyId === societyId)
-function requirePerm(societyId, perm) {
-  const u = requireVerified()
+// asUserId: the user who started an action that finishes later (the agent's check takes a few
+// seconds), so it still lands on their account if the session has changed since.
+function requirePerm(societyId, perm, asUserId) {
+  const u = asUserId ? db.users.find((x) => x.id === asUserId && x.emailVerified) : requireVerified()
+  if (!u) throw new ApiError('auth/required', 'Please sign in.')
   const m = membership(u.id, societyId)
   if (!m || m.status !== 'active' || !m.permissions.includes(perm))
     throw new ApiError('permission-denied', 'Your role does not allow this action.')
@@ -138,7 +155,25 @@ function claimView(c) {
     latestReview: out(c.reviews[c.reviews.length - 1] ?? null),
     society: out(societyCard(c.societyId)),
     claimant: userCard(c.claimantId),
-    payment: c.paymentId ? out(db.payments.find((p) => p.id === c.paymentId)) : null,
+    payment: c.paymentId ? paymentView(db.payments.find((p) => p.id === c.paymentId)) : null,
+  }
+}
+
+// What the Union treasurer can check the recipient against before signing: the claimant's saved
+// wallet and its history. Worked out from the records here, not taken from the payment itself.
+function paymentView(p) {
+  const u = db.users.find((x) => x.id === p.recipientUserId)
+  const version = db.claims.find((c) => c.id === p.claimId)?.versions.find((v) => v.version === p.claimVersion)
+  return {
+    ...out(p),
+    recipientCheck: {
+      savedWallet: u?.walletAddress ?? null,
+      matchesSavedWallet: sameAddr(p.recipientAddress, u?.walletAddress),
+      walletChangedAt: u?.walletChangedAt ?? null,
+      walletSince: u?.walletChangedAt ?? u?.createdAt ?? null,
+      earlierPayouts: db.payments.filter((x) => x.id !== p.id && x.status === 'confirmed' && sameAddr(x.recipientAddress, p.recipientAddress)).length,
+      printedOnReceipt: !!version?.aiExtraction?.rawTextExcerpt?.toLowerCase().includes(p.recipientAddress.toLowerCase()),
+    },
   }
 }
 
@@ -149,7 +184,8 @@ function setStatus(claim, status) {
 
 // Drafts the payment from the trusted claim record and the member's saved wallet only.
 // approvedBy is 'agent', or the society treasurer who upheld an appeal.
-function createPayment(c, version, approvedBy, at) {
+// recipientOverride exists for the attack demo alone (see attackDemo above).
+function createPayment(c, version, approvedBy, at, recipientOverride) {
   const s = society(c.societyId)
   const claimant = db.users.find((x) => x.id === c.claimantId)
   const f = c.versions.find((v) => v.version === version).fields
@@ -160,7 +196,7 @@ function createPayment(c, version, approvedBy, at) {
     claimVersion: version,
     societyId: c.societyId,
     recipientUserId: claimant.id,
-    recipientAddress: claimant.walletAddress,
+    recipientAddress: recipientOverride ?? claimant.walletAddress,
     sourceAddress: UNION_TREASURY_WALLET,
     fiatAmount: f.amount,
     fiatCurrency: f.currency,
@@ -261,6 +297,7 @@ export const mockApi = {
         (c) => c.claimantId === u.id && ['approved', 'awaiting_ledger', 'payment_pending', 'needs_reconciliation'].includes(c.status),
       )
       if (busy) throw new ApiError('failed-precondition', 'You have an approved claim being paid. Change your wallet after it settles.')
+      if (!sameAddr(walletAddress, u.walletAddress)) u.walletChangedAt = now()
       u.walletAddress = walletAddress || null
       audit('user.wallet_changed', { type: 'user', id: u.id }, null)
     }
@@ -466,7 +503,11 @@ export const mockApi = {
   async extractReceipt(receipt, { onProgress } = {}) {
     requireVerified()
     if (receipt?.kind === 'sample') await wait(1600) // sample reads are instant; pause so the demo shows the step
-    return readReceipt(receipt, { samples: db.receipts, onProgress })
+    const x = await readReceipt(receipt, { samples: db.receipts, onProgress })
+    // The scan's own match is loose (it is built for OCR noise), so take the address strictly here.
+    const payTo = x.rawTextExcerpt?.match(/0x[a-fA-F0-9]{40}(?![a-fA-F0-9])/)?.[0]
+    if (!attackDemo || !payTo) return x
+    return { ...x, flags: x.flags.filter((f) => f.code === 'total_mismatch'), obeyedInstruction: { payTo } }
   },
 
   // ----- claims -----
@@ -509,8 +550,8 @@ export const mockApi = {
    * with no society treasurer in between. agentVerdict is the backend agent's own judgement
    * (set by hybridApi); without it the checks are the whole decision.
    */
-  async submitClaim({ claimId, societyId, fields, receipt, entryMode, aiExtraction, supersedesClaimId, agentVerdict }) {
-    const u = requirePerm(societyId, 'claims.create')
+  async submitClaim({ claimId, societyId, fields, receipt, entryMode, aiExtraction, supersedesClaimId, agentVerdict, asUserId }) {
+    const u = requirePerm(societyId, 'claims.create', asUserId)
     if (!u.walletAddress) throw new ApiError('failed-precondition', 'Add a payout wallet to your account before claiming.')
     const s = society(societyId)
     if (s.reimbursement.status !== 'enabled') throw new ApiError('failed-precondition', `${s.name} has not enabled reimbursement.`)
@@ -593,14 +634,14 @@ export const mockApi = {
     }
     claim.currentVersion = version.version
     claim.appeal = null
-    if (validation.passed) createPayment(claim, version.version, 'agent', ts)
+    if (validation.passed) createPayment(claim, version.version, 'agent', ts, attackDemo ? extraction.obeyedInstruction?.payTo : undefined)
     else setStatus(claim, 'validation_failed')
 
     if (validation.passed && supersedesClaimId) {
       const old = db.claims.find((c) => c.id === supersedesClaimId && c.claimantId === u.id)
       if (old && old.status === 'returned') setStatus(old, 'superseded')
     }
-    audit('claim.submitted', { type: 'claim', id: claim.id }, societyId, { version: version.version, checksPassed: validation.passed })
+    audit('claim.submitted', { type: 'claim', id: claim.id }, societyId, { version: version.version, checksPassed: validation.passed }, u.id)
     audit(validation.passed ? 'claim.agent_approved' : 'claim.agent_declined', { type: 'claim', id: claim.id }, societyId, { version: version.version }, 'agent')
     commit()
     return claimView(claim)
@@ -676,7 +717,7 @@ export const mockApi = {
     return db.payments
       .slice()
       .sort((a, b) => b.approvedAt.localeCompare(a.approvedAt))
-      .map((p) => ({ ...out(p), society: societyCard(p.societyId), recipient: userCard(p.recipientUserId) }))
+      .map((p) => ({ ...paymentView(p), society: societyCard(p.societyId), recipient: userCard(p.recipientUserId) }))
   },
 
   async retryPayment(paymentId) {
@@ -788,6 +829,14 @@ export const mockApi = {
       db = seed()
       approvePendingSeedClaims()
       sessionUserId = DEFAULT_USER
+      this.setAttack(false)
+    },
+    attack: () => attackDemo,
+    setAttack(on) {
+      attackDemo = !!on
+      try {
+        localStorage.setItem(ATTACK_KEY, attackDemo ? '1' : '0')
+      } catch {}
       commit()
     },
     code: DEMO_CODE,

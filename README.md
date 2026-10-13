@@ -73,7 +73,7 @@ Things that catch people out:
 | Sam Lindqvist | Society treasurer, FinTech | Society setup (not yet enabled) |
 
 - **The Union wallet** is the first address of the emulated Ledger. It comes from the seed phrase in `backend/.env` (`SPECULOS_SEED`), so each developer's emulator has its own unless they share a seed. `curl localhost:3000/api/treasurer/wallet` shows the address and its balances. Set `VITE_UNION_TREASURY_WALLET` in `frontend/.env.local` to the same address; that variable only changes the "From" label, not where money comes from.
-- **Members' wallets are not generated.** The demo personas' addresses are fixed sample values in [`frontend/src/data/mock/users.json`](frontend/src/data/mock/users.json), and a new account types its own at sign-up. Nobody on the team holds the keys to the sample addresses, so test USDC paid to them is gone. To show money arriving, put an address you control on the claimant's **Me** page before submitting.
+- **Members' wallets.** The demo personas' addresses in [`frontend/src/data/mock/users.json`](frontend/src/data/mock/users.json) were generated for this project on 2026-10-13, from one recovery phrase held by the developer who generated them (in the git-ignored `backend/data/demo-wallets.json`). Nobody else can move test USDC paid to them. A new account types its own address at sign-up.
 - Payments always go to the claimant's saved wallet, never to an address found on a receipt.
 
 Backend developers: [`HANDOVER.md`](HANDOVER.md) has the schemas, status machine and API contract, with a 2026-10-12 changelog entry for everything above.
@@ -118,6 +118,7 @@ The rows below were rewritten for the agent-decides flow on 2026-10-12. The clai
 | Jonah | Appeals → **E** (Request edits) or **D** (Deny appeal) with a quick reason | The member sees the reason |
 | Robin (Union treasurer) | Payments → open a claim → **Open Ledger prompt** → sign on the device | Device approval. Paid only after on-chain confirmation |
 | Robin | Payments → CLM-0006 | The AI *was* tricked. The extra fields were discarded and payment can only go to Kit's saved wallet |
+| Amara, then Robin | Tick **Attack demo** in the demo bar → Scan → pick the *Northgate Print Shop* sample → submit. Switch to Robin → Payments → open the claim → **Open Ledger prompt** → reject on the device | The safeguards are switched off on purpose: the fraud scan is skipped and the agent obeys the receipt's hidden "pay this wallet" note. Every check passes, but the recipient check shows the address is not Amara's saved wallet and is printed on the receipt. The Ledger is what stops it |
 | Robin | Open Ledger prompt → reject on the device | Nothing is signed; the claim stays approved and can be sent again |
 | Robin (mock mode only) | Sign a claim, choosing "RPC times out" | Needs-reconciliation path, with no double payment |
 | Amara | Claims → CLM-0003 → Edit claim, change £39.60 to £35.10 | A partial claim creates version 2 and goes back to the agent |

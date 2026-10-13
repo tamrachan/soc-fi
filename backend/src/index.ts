@@ -1,5 +1,5 @@
 import express, { type Request, type Response } from "express";
-import { formatUnits, isAddress, parseUnits, type Hex } from "viem";
+import { formatUnits, getAddress, isAddress, parseUnits, type Hex } from "viem";
 import { auditClaim } from "./agent.js";
 import { config } from "./config.js";
 import { DeviceError } from "./ledger.js";
@@ -169,7 +169,8 @@ app.post("/api/payments/sign", async (req, res) => {
   const { paymentId, recipientAddress } = req.body ?? {};
   const amountUsdc = Number(req.body?.amountUsdc);
   if (!paymentId) return void res.status(400).json({ error: "paymentId is required" });
-  if (!isAddress(recipientAddress ?? ""))
+  // Any 20-byte address is accepted whatever its letter case; the device shows it checksummed.
+  if (!isAddress(recipientAddress ?? "", { strict: false }))
     return void res.status(400).json({ error: "recipientAddress is not a valid address" });
   if (!(amountUsdc > 0))
     return void res.status(400).json({ error: "amountUsdc must be a positive number" });
@@ -186,7 +187,7 @@ app.post("/api/payments/sign", async (req, res) => {
   deviceBusy = true;
   try {
     const { signedTx } = await signTransfer(
-      recipientAddress,
+      getAddress(recipientAddress),
       parseUnits(amountUsdc.toFixed(config.usdcDecimals), config.usdcDecimals),
     );
     const result = config.broadcast

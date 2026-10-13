@@ -9,6 +9,7 @@ import { NETWORKS } from '../config.js'
 import Receipt from '../components/Receipt.jsx'
 import ClaimTimeline from '../components/ClaimTimeline.jsx'
 import LedgerSignModal from '../components/LedgerSignModal.jsx'
+import RecipientCheck from '../components/RecipientCheck.jsx'
 import DecisionBar from '../components/DecisionBar.jsx'
 import { Checks, Empty, ErrorText, Icon, Loading, Notice, PageHead, StatusPill } from '../components/ui.jsx'
 
@@ -92,6 +93,7 @@ function PaymentPanel({ claim, onOpenLedger, nextId, canSign }) {
             {p.approvedBy === 'agent' ? 'Approved by the agent.' : 'Appeal upheld by the society treasurer.'} Your job is to check that the
             amount and recipient on the device match this claim.
           </p>
+          <RecipientCheck payment={p} claimant={claim.claimant} />
           <button className="btn btn-primary" onClick={onOpenLedger}>
             Open Ledger prompt
           </button>
@@ -101,6 +103,7 @@ function PaymentPanel({ claim, onOpenLedger, nextId, canSign }) {
         <>
           <h2>Rejected on device.</h2>
           <p className="muted" style={{ fontSize: 14 }}>No transaction was signed. The approval still stands, so you can send it to the Ledger again.</p>
+          <RecipientCheck payment={p} claimant={claim.claimant} />
           <button
             className="btn btn-ghost"
             disabled={retryState.pending}
@@ -177,6 +180,7 @@ export default function ReviewDetail() {
   const v = claim.latest
   const x = v.aiExtraction
   const discarded = Object.entries(x?.discardedFields ?? {})
+  const hijacked = claim.payment?.recipientCheck?.matchesSavedWallet === false
   const own = claim.claimantId === session.user.id
   const canDecide = claim.status === 'pending_review' && !own && hasPerm(session, claim.societyId, 'claims.approve')
   const nextId = queue.find((c) => c.status === 'pending_review' && c.id !== claim.id && c.claimantId !== session.user.id)?.id
@@ -247,7 +251,19 @@ export default function ReviewDetail() {
         </div>
 
         <div className="stack" style={{ '--stack': '40px' }}>
-          {discarded.length > 0 && (
+          {discarded.length > 0 && hijacked && (
+            <div className="card card-pad stack" style={{ '--stack': '12px', borderColor: 'rgba(214,143,134,0.4)' }}>
+              <span className="eyebrow" style={{ color: 'var(--rose)' }}>
+                Prompt injection not contained
+              </span>
+              <h2>The AI was tricked, and the payment follows the receipt.</h2>
+              <p className="muted" style={{ fontSize: 14 }}>
+                Hidden text on this receipt named another wallet, and the drafted transfer pays it instead of {first}'s saved
+                wallet. Every automated check passed. Only your signature on the Ledger can release it, so reject it there.
+              </p>
+            </div>
+          )}
+          {discarded.length > 0 && !hijacked && (
             <div className="card card-pad stack" style={{ '--stack': '12px', borderColor: 'rgba(214,143,134,0.4)' }}>
               <span className="eyebrow" style={{ color: 'var(--rose)' }}>
                 Prompt injection contained

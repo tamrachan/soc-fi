@@ -30,19 +30,19 @@ function Boundary() {
         <div>
           <h3>The agent, on its own</h3>
           <ol>
-            <li>Reads the receipt and suggests merchant, date, total and category</li>
-            <li>Flags anything suspicious, like text written to trick an AI</li>
-            <li>Has no payment tools and never sees a wallet key</li>
-            <li>Its suggestions are checked by the member, then by seven plain-code rules</li>
+            <li>Reads the receipt and fills in the claim for the member to check</li>
+            <li>Decides the claim: seven plain-code checks, then its own judgement of whether this society should be paying for it</li>
+            <li>Drafts the payment to the member's saved wallet, never to an address found on a receipt</li>
+            <li>Cannot send it. It holds no wallet key, and a member can appeal its decision to their society treasurer</li>
           </ol>
         </div>
         <div>
           <h3>Only the Union treasurer, on a Ledger</h3>
           <ol>
-            <li>Approves one exact version of a claim</li>
-            <li>Sees the real amount and recipient on the device's own screen</li>
-            <li>Holds to sign, or rejects. Nothing moves without it</li>
-            <li>Money goes only to the member's saved wallet, never an address from a receipt</li>
+            <li>Releases the money. No one else can, and no software can do it for them</li>
+            <li>Sees the real amount, recipient and network on the device's own screen</li>
+            <li>Checks that the recipient is the member's saved wallet, and how long it has been theirs</li>
+            <li>Signs or rejects on the device. If the agent was tricked, this is where it stops</li>
           </ol>
         </div>
       </div>

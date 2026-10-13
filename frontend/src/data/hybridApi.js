@@ -32,26 +32,33 @@ export const hybridApi = {
   // verdict is added to the rule checks; if it cannot be reached the claim is not submitted.
   async submitClaim(payload) {
     const { fields, receipt } = payload
+    // The member may switch persona or sign out while the agent thinks; the claim stays theirs.
+    const asUserId = payload.asUserId ?? (await mockApi.getSession()).user?.id
+    if (!asUserId) throw new ApiError('auth/required', 'Please sign in.')
     const { name, category, reimbursement: r } = await mockApi.getSociety(payload.societyId)
     const extraction = payload.aiExtraction ?? (await mockApi.extractReceipt(receipt))
     const image = receipt?.kind === 'upload' && receipt.dataUrl?.startsWith('data:image') ? receipt.dataUrl : undefined
-    const agentVerdict = await post('/api/agent/audit', {
-      society: {
-        name,
-        category,
-        allowedCategories: r.allowedCategories,
-        perClaimLimit: r.perClaimLimit,
-        termBudget: r.termBudget,
-        spentThisTerm: r.spentThisTerm,
-        currency: r.currency,
-      },
-      claim: { ...fields, amount: Number(fields.amount) },
-      receiptText:
-        extraction?.rawTextExcerpt ||
-        JSON.stringify({ merchant: extraction?.merchant, date: extraction?.date, total: extraction?.total, items: extraction?.items }),
-      receiptImage: image,
-    })
-    return mockApi.submitClaim({ ...payload, aiExtraction: extraction, agentVerdict })
+    // Attack demo: the agent is not asked. It is taken to have followed the receipt's hidden text.
+    const tricked = mockApi.demo.attack() && extraction?.obeyedInstruction
+    const agentVerdict = tricked
+      ? { decision: 'approve', reason: 'Attack demo: the agent followed the instructions hidden on the receipt.', flags: [] }
+      : await post('/api/agent/audit', {
+          society: {
+            name,
+            category,
+            allowedCategories: r.allowedCategories,
+            perClaimLimit: r.perClaimLimit,
+            termBudget: r.termBudget,
+            spentThisTerm: r.spentThisTerm,
+            currency: r.currency,
+          },
+          claim: { ...fields, amount: Number(fields.amount) },
+          receiptText:
+            extraction?.rawTextExcerpt ||
+            JSON.stringify({ merchant: extraction?.merchant, date: extraction?.date, total: extraction?.total, items: extraction?.items }),
+          receiptImage: image,
+        })
+    return mockApi.submitClaim({ ...payload, aiExtraction: extraction, agentVerdict, asUserId })
   },
 
   // Resolves once the treasurer has confirmed on the device and the transfer is on-chain.

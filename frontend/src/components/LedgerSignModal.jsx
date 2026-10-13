@@ -4,6 +4,7 @@ import { useAction } from '../state/AppState.jsx'
 import { fmtMoney, shortAddr } from '../lib/format.js'
 import { NETWORKS } from '../config.js'
 import { ErrorText, Icon } from './ui.jsx'
+import RecipientCheck from './RecipientCheck.jsx'
 
 function HoldToSign({ onDone, disabled, duration = 1300 }) {
   const [p, setP] = useState(0)
@@ -84,6 +85,7 @@ export default function LedgerSignModal({ payment, claim, onClose }) {
   const [confirm, confirmState] = useAction((id, o) => api.confirmOnDevice(id, o))
   const [cancel, cancelState] = useAction((id) => api.cancelOnDevice(id))
   const net = NETWORKS[payment.network]?.label ?? payment.network
+  const hijacked = payment.recipientCheck?.matchesSavedWallet === false
 
   useEffect(() => {
     const t = setTimeout(() => setStage('review'), 1100)
@@ -217,6 +219,7 @@ export default function LedgerSignModal({ payment, claim, onClose }) {
                 </>
               ) : (
                 <>
+                  {hijacked && <RecipientCheck payment={payment} claimant={claim.claimant} />}
                   <div className="stack" style={{ '--stack': '8px' }}>
                     <h2>Check the screen, not this page.</h2>
                     <p className="muted">
@@ -238,12 +241,13 @@ export default function LedgerSignModal({ payment, claim, onClose }) {
                     </dd>
                     <dt>Recipient</dt>
                     <dd>
-                      {claim.claimant.displayName}
-                      <span className="faint"> · saved wallet {shortAddr(payment.recipientAddress)}</span>
+                      {hijacked ? 'Not the claimant’s wallet' : claim.claimant.displayName}
+                      <span className="addr" style={{ display: 'block' }}>{payment.recipientAddress}</span>
                     </dd>
                     <dt>From</dt>
                     <dd className="addr">Treasury {shortAddr(payment.sourceAddress)}</dd>
                   </dl>
+                  {!hijacked && <RecipientCheck payment={payment} claimant={claim.claimant} />}
                   {hasDevice && stage === 'signing' && (
                     <p className="muted">
                       Waiting for the device. Press <strong>Right</strong> to page through the amount, recipient and network,

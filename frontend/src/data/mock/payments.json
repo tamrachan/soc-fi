@@ -6,7 +6,7 @@
     "claimVersion": 1,
     "societyId": "soc_baking",
     "recipientUserId": "usr_amara",
-    "recipientAddress": "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
+    "recipientAddress": "0x17f2348121a79F7553959846BA6375F02faA8047",
     "sourceAddress": "0x5c6B0f7Bf3E7ce046039Bd8FABdfD3f9F5021678",
     "fiatAmount": 34.6,
     "fiatCurrency": "GBP",

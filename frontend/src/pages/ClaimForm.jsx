@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api, isMock } from '../data/api.js'
+import { dismissSubmission, startSubmission } from '../data/submissions.js'
 import { useAction, useApi, useSession } from '../state/AppState.jsx'
 import { claimableSocieties } from '../domain/permissions.js'
 import { CATEGORIES, CURRENCIES } from '../data/schema.js'
@@ -235,8 +236,16 @@ export default function ClaimForm() {
   const [failed, setFailed] = useState(null)
   const [progress, setProgress] = useState(null)
   const [extract, extractState] = useAction((r) => api.extractReceipt(r, { onProgress: setProgress }))
-  const [submit, submitState] = useAction((payload) => api.submitClaim(payload))
+  const [submitState, setSubmitState] = useState({ pending: false, error: null })
   const initFor = useRef(null)
+  // The submit keeps running if the member leaves; this page must not react to its result then.
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
 
   // Prefill when editing an existing claim (returned for edits, or failed validation).
   useEffect(() => {
@@ -309,16 +318,23 @@ export default function ClaimForm() {
 
   const onSubmit = async (e) => {
     e.preventDefault()
-    const res = await submit({
-      claimId: failed?.id ?? id,
-      societyId,
-      fields: { ...fields, amount: Number(fields.amount) },
-      receipt,
-      entryMode: mode ?? 'manual',
-      aiExtraction: extraction,
-      supersedesClaimId: fromId ?? undefined,
-    })
-    if (!res.ok) return
+    setSubmitState({ pending: true, error: null })
+    const res = await startSubmission(
+      {
+        claimId: failed?.id ?? id,
+        societyId,
+        fields: { ...fields, amount: Number(fields.amount) },
+        receipt,
+        entryMode: mode ?? 'manual',
+        aiExtraction: extraction,
+        supersedesClaimId: fromId ?? undefined,
+      },
+      { userId: session.user.id, societyName: society.name },
+    )
+    // Gone elsewhere: My claims shows the result (or the error, with a retry).
+    if (!mounted.current) return
+    setSubmitState({ pending: false, error: res.error ?? null })
+    if (!res.ok) return dismissSubmission(res.id)
     if (res.data.status !== 'validation_failed') {
       navigate(`/claims/${res.data.id}`, { state: { submitted: true } })
     } else {
@@ -571,6 +587,7 @@ export default function ClaimForm() {
               </label>
 
               <ErrorText error={submitState.error} />
+              {submitState.pending && <p className="hint">You can leave this page. The result will be in My claims.</p>}
               <div className="row sticky-actions">
                 <button className="btn btn-primary" disabled={!ready || submitState.pending}>
                   {submitState.pending ? (mode === 'manual' && !extraction ? 'Reading receipt and checking…' : 'Running checks…') : editing || failed ? 'Resubmit claim' : 'Submit claim'}
