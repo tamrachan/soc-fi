@@ -511,14 +511,26 @@ p { margin: 0; }
   .table.responsive td { display: block; padding: 0; border: 0; text-align: left; }
   .table.responsive td.num, .table.responsive td.end { text-align: right; justify-self: end; }
   .table.responsive .hide-sm { display: none; }
+  /* a long "what happens next" gets its own line instead of squeezing the claim name */
+  .table.responsive td.next-step { grid-column: 1 / -1; justify-self: start; text-align: left; }
+  .table.responsive td.next-step:empty { display: none; }
+  /* audit log: when | who, what | society, then the detail underneath */
+  .audit-table td:nth-child(2), .audit-table td:nth-child(4) { text-align: right; justify-self: end; }
+  .audit-table td:nth-child(5) { grid-column: 1 / -1; overflow-wrap: anywhere; }
+  .audit-table td:nth-child(5):empty { display: none; }
+
+  /* tabs stay on one line and scroll sideways */
+  .tabs { overflow-x: auto; scrollbar-width: none; gap: 18px; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { white-space: nowrap; flex-shrink: 0; }
 
   /* claim form: compact receipt, sticky submit */
   .claim-receipt .receipt-wrap { max-height: 48vh; overflow: auto; padding: 18px 12px; }
   .claim-receipt .receipt-upload img { max-height: 44vh; }
   .sticky-actions {
     position: sticky; bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom)); z-index: 5;
-    margin-inline: calc(-1 * var(--gutter)); padding: 12px var(--gutter);
-    background: linear-gradient(180deg, rgba(8, 8, 10, 0), var(--canvas) 30%);
+    margin-inline: calc(-1 * var(--gutter)); padding: 18px var(--gutter) 12px;
+    background: linear-gradient(180deg, rgba(8, 8, 10, 0), var(--canvas) 14px);
   }
   .sticky-actions .btn-primary { flex: 1; }
 

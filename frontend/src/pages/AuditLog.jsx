@@ -55,7 +55,7 @@ export default function AuditLog() {
         <Empty title="Nothing logged yet" />
       ) : (
         <div className="table-wrap">
-          <table className="table">
+          <table className="table responsive audit-table">
             <thead>
               <tr>
                 <th>When</th>

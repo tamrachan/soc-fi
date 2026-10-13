@@ -116,7 +116,7 @@ export default function MyClaims() {
                   <td>
                     <StatusPill status={c.status} />
                   </td>
-                  <td className="right end">
+                  <td className="right end next-step">
                     <NextStep claim={c} />
                   </td>
                 </tr>

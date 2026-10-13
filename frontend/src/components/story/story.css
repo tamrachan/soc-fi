@@ -3,7 +3,7 @@
 .story-sticky {
   position: sticky; top: calc(64px + env(safe-area-inset-top));
   height: calc(100vh - 64px); height: calc(100svh - 64px - env(safe-area-inset-top));
-  display: grid; grid-template-columns: minmax(280px, 400px) 1fr; gap: 56px; align-items: center;
+  display: grid; grid-template-columns: minmax(280px, 400px) minmax(0, 1fr); gap: 56px; align-items: center;
 }
 .story + .story { margin-top: 0; }
 .story-title { font-size: clamp(22px, 2.6vw, 30px); letter-spacing: -0.03em; line-height: 1.05; }
@@ -13,11 +13,13 @@
 .story-index li .mono { color: var(--steel); margin-right: 10px; }
 .rail { position: absolute; left: 0; top: 4px; bottom: 4px; width: 1px; background: var(--line-2); }
 .rail-fill { position: absolute; inset: 0; background: var(--copper); transform-origin: top; transform: scaleY(0); }
-.story-caps { position: relative; min-height: 150px; }
-.story-cap { position: absolute; inset: 0 0 auto 0; opacity: 0; display: grid; gap: 8px; }
+/* Captions share one grid cell, so the block is as tall as the longest caption and never overlaps the stage. */
+.story-caps { display: grid; }
+.story-cap { grid-area: 1 / 1; opacity: 0; display: grid; gap: 8px; align-content: start; }
 .story-cap h3 { font: 500 20px/1.15 var(--font-display); text-transform: uppercase; letter-spacing: -0.02em; }
 .story-cap p { color: var(--fog); font-size: 15.5px; line-height: 1.55; max-width: 40ch; }
-.story-stage { display: grid; place-items: center; height: 100%; min-width: 0; }
+/* StoryFrame scales the phone or window inside to fit this box (useFitStage). */
+.story-stage { display: grid; place-items: center; height: 100%; min-width: 0; min-height: 0; overflow: hidden; }
 
 /* shared */
 .scene { position: absolute; inset: 0; opacity: 0; }
@@ -171,23 +173,23 @@
 
 /* ---------- small screens: caption on top, stage scaled below ---------- */
 @media (max-width: 960px) {
-  .story-sticky { grid-template-columns: 1fr; grid-template-rows: auto 1fr; gap: 12px; align-items: start; padding-top: 16px; }
+  .story-sticky { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 12px; align-items: stretch; padding-block: 16px 12px; }
   .story-text { gap: 10px; }
   .story-index { display: none; }
   .story-text .eyebrow.ruled::after { display: none; }
   .story-title { font-size: 16px; }
-  .story-caps { min-height: 112px; }
+  .story-cap { gap: 4px; }
   .story-cap h3 { font-size: 15px; }
-  .story-cap p { font-size: 13.5px; }
+  .story-cap p { font-size: 13.5px; line-height: 1.5; max-width: none; }
   .story-stage { align-items: start; }
-  .phone-wrap { width: 216px; height: 432px; }
-  .phone { transform: scale(0.72); transform-origin: top left; }
-  .window-wrap { width: 360px; height: 268px; }
-  .window { transform: scale(0.58); transform-origin: top left; }
 }
-@media (max-height: 760px) and (min-width: 961px) {
-  .phone-wrap { width: 255px; height: 510px; }
-  .phone { transform: scale(0.85); transform-origin: top left; }
+/* Signed in on a phone, the bottom tab bar (and its raised Scan button, 26px) covers the foot of the screen. */
+@media (max-width: 760px) {
+  .shell:has(.tabbar) .story-sticky { height: calc(100svh - 64px - var(--tabbar-h) - 26px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+}
+/* Very short phones: drop the chapter title so the animation keeps its room. */
+@media (max-width: 960px) and (max-height: 700px) {
+  .story-title { display: none; }
 }
 
 .story-interlude { height: 30vh; display: grid; place-items: center; }
@@ -201,7 +203,7 @@
 
 /* treasurer: claim fields with inline warning, then hand off to the Ledger */
 .ledger-row { opacity: 0; margin-top: auto; display: flex; align-items: center; gap: 14px; }
-.ledger-row .ledger-btn { height: 44px; padding: 0 22px; border-radius: 999px; background: #fff; color: #000; display: inline-grid; place-items: center; font: 600 12.5px var(--font-ui); }
+.ledger-row .ledger-btn { height: 44px; padding: 0 22px; border-radius: 999px; background: #fff; color: #000; display: inline-grid; place-items: center; font: 600 12.5px var(--font-ui); white-space: nowrap; flex-shrink: 0; }
 .ledger-row .faint { font-size: 11px; }
 .cf { display: grid; gap: 5px; margin: 10px 0 6px; }
 .cf-row { display: grid; grid-template-columns: 64px 1fr 16px; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 6px; border: 1px solid #2e3038; background: var(--panel); font-size: 12px; color: var(--white); opacity: 0; }

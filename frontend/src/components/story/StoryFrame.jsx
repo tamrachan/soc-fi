@@ -1,5 +1,36 @@
+import { useEffect, useRef } from 'react'
+
+/**
+ * Scales the stage's mock-up (phone or window) to fit the space it has, so it never overflows
+ * a small screen or runs under the caption. The mock-up keeps its design size; only the wrapper shrinks.
+ */
+function useFitStage(stageRef) {
+  useEffect(() => {
+    const stage = stageRef.current
+    const wrap = stage?.firstElementChild
+    const inner = wrap?.firstElementChild
+    if (!inner) return
+    const fit = () => {
+      const w = inner.offsetWidth
+      const h = inner.offsetHeight
+      const s = Math.min(stage.clientWidth / w, stage.clientHeight / h, 1)
+      wrap.style.width = `${w * s}px`
+      wrap.style.height = `${h * s}px`
+      inner.style.transform = s < 1 ? `scale(${s})` : ''
+      inner.style.transformOrigin = 'top left'
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(stage)
+    return () => ro.disconnect()
+  }, [stageRef])
+}
+
 /** Shared layout for one scroll chapter: step index + caption on the left, sticky stage on the right. */
 export default function StoryFrame({ sectionRef, eyebrow, title, steps, children, height }) {
+  const stageRef = useRef(null)
+  useFitStage(stageRef)
+
   return (
     <section ref={sectionRef} className="story" style={{ height }}>
       <div className="story-sticky">
@@ -30,7 +61,9 @@ export default function StoryFrame({ sectionRef, eyebrow, title, steps, children
             ))}
           </div>
         </div>
-        <div className="story-stage">{children}</div>
+        <div className="story-stage" ref={stageRef}>
+          {children}
+        </div>
       </div>
     </section>
   )
